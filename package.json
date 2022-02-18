@@ -1,0 +1,29 @@
+{
+  "name": "css-populate",
+  "version": "1.0.0",
+  "description": "Tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
+  "type": "module",
+  "bin": {
+    "css-populate": "./css-populate.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SolidLabInfra/css-populate.git"
+  },
+  "keywords": [
+    "solid"
+  ],
+  "author": "Wim Van de Meerssche",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SolidLabInfra/css-populate/issues"
+  },
+  "homepage": "https://github.com/SolidLabInfra/css-populate#readme",
+  "dependencies": {
+    "node-fetch": "^3.2.0",
+    "yargs": "^17.3.1"
+  }
+}
