@@ -160,7 +160,8 @@ async function main() {
     a acl:Authorization;
     acl:accessTo <./person.nq>;
     acl:agent <http://css:3000/${account}/profile/card#me>;
-    acl:mode acl:Read, acl:Write, acl:Control.`);
+    acl:mode acl:Read, acl:Write, acl:Control.
+`);
             console.log(`   created ${podFileAcl}`);
         }
     }
