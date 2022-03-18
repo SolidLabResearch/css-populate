@@ -40,5 +40,6 @@ bin/ldbc-snb-decentralized generate --scale 0.1 --overwrite --fragmentConfig con
 # Credits
 
 Partially based on example code from Ruben Dedecker
+
 Generated data by [ldbc-snb-decentralized](https://github.com/rubensworks/ldbc-snb-decentralized.js) by Ruben Taelman
 
