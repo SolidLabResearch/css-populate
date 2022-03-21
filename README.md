@@ -43,3 +43,7 @@ Partially based on example code from Ruben Dedecker
 
 Generated data by [ldbc-snb-decentralized](https://github.com/rubensworks/ldbc-snb-decentralized.js) by Ruben Taelman
 
+# License
+
+This code is copyrighted by [Ghent University – imec](http://idlab.ugent.be/) and released under the [MIT license](http://opensource.org/licenses/MIT).
+
