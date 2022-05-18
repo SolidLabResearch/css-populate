@@ -92,12 +92,19 @@ async function createPod(nameValue) {
     // console.log(`res.status`, res.status);
 
     // See server response or error text
+
+    if (!res.ok) {
+        console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
+        console.error(await res.text());
+        throw new Error(res);
+    }
+
     let jsonResponse = await res.json();
     // console.log(`jsonResponse`, jsonResponse);
 
-    if (jsonResponse.name && jsonResponse.name.includes('Error')) {
-        console.error(`${jsonResponse.name} - Creating pod for ${nameValue} failed: ${jsonResponse.message}`);
-    }
+    // if (jsonResponse.name && jsonResponse.name.includes('Error')) {
+    //     console.error(`${jsonResponse.name} - Creating pod for ${nameValue} failed: ${jsonResponse.message}`);
+    // }
     // else {
         // console.log(`Pod for ${nameValue} created successfully`);
     // }
