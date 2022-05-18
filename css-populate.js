@@ -33,7 +33,7 @@ const argv = yargs(hideBin(process.argv))
         demandOption: true
     })
     .option('dir', {
-        alias: 'd',
+        alias: 'g',
         type: 'string',
         description: 'Dir with the generated data',
         demandOption: false,
