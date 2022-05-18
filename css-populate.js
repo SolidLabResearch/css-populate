@@ -93,6 +93,7 @@ async function createPod(nameValue) {
 
     // See server response or error text
 
+    console.log(`res.text`, await res.text());
     if (!res.ok) {
         console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
         console.error(await res.text());
