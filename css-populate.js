@@ -17,7 +17,7 @@ const argv = yargs(hideBin(process.argv))
         alias: 'd',
         type: 'string',
         description: 'Data dir of the CSS',
-        demandOption: true
+        demandOption: false
     })
     // .option('generated', {
     //     alias: 'g',
@@ -50,6 +50,7 @@ const argv = yargs(hideBin(process.argv))
     .check((argv, options) => {
         if (argv.source === 'dir' && !argv.dir) {
             return "--source dir requires --dir";
+            return "--source dir requires --data";
         }
         if (argv.source === 'generate' && !argv.count) {
             return "--source generate requires --count";
@@ -60,7 +61,7 @@ const argv = yargs(hideBin(process.argv))
 
 
 const cssBaseUrl = argv.url.endsWith('/') ? argv.url : argv.url+'/';
-const cssDataDir = argv.data.endsWith('/') ? argv.data : argv.data+'/';
+const cssDataDir = argv.source === 'dir' ? argv.data.endsWith('/') ? argv.data : argv.data+'/' : null;
 // const generatedDataBaseDir = argv.generated.endsWith('/') ? argv.generated : argv.generated+'/';
 const generatedDataBaseDir = argv.source === 'dir' ? argv.dir.endsWith('/') ? argv.dir : argv.dir+'/' : null;
 const generateCount = argv.count;
