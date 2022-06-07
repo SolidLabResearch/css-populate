@@ -71,6 +71,7 @@ const generateCount = argv.count;
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
  */
 async function createPod(nameValue) {
+    console.log(`Will create pod ${nameValue}...`);
     const settings =  {
         podName: nameValue,
         email: `${nameValue}@example.org`,
@@ -82,6 +83,8 @@ async function createPod(nameValue) {
     }
 
     //console.log('SETTINGS', settings)
+
+    console.log(`Connecting to ${cssBaseUrl}idp/register/...`);
 
     const res = await fetch(`${cssBaseUrl}idp/register/`, {
         method: 'POST',
@@ -137,6 +140,8 @@ function copyPodFile(account, localFilePath, localPodDir, podFileRelative) {
 }
 
 function writePodFile(account, fileContent, localPodDir, podFileRelative) {
+    console.log(`   Will write to account ${account}, pod file ${podFileRelative}...`);
+
     const podFilePath = `${localPodDir}/${podFileRelative}`;
     fs.writeFileSync(localFilePath, fileContent);
     console.log(`   created ${podFilePath}`);
