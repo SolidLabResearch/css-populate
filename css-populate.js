@@ -71,7 +71,7 @@ const generateCount = argv.count;
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
  */
 async function createPod(nameValue) {
-    console.log(`Will create pod ${nameValue}...`);
+    console.log(`Will create pod "${nameValue}"...`);
     const settings =  {
         podName: nameValue,
         email: `${nameValue}@example.org`,
@@ -82,9 +82,8 @@ async function createPod(nameValue) {
         createWebId: true
     }
 
-    //console.log('SETTINGS', settings)
-
-    console.log(`Connecting to ${cssBaseUrl}idp/register/...`);
+    console.log(`   POSTing to: ${cssBaseUrl}idp/register/`);
+    //console.log('      settings', settings)
 
     const res = await fetch(`${cssBaseUrl}idp/register/`, {
         method: 'POST',
@@ -95,27 +94,43 @@ async function createPod(nameValue) {
     // console.log(`res.ok`, res.ok);
     // console.log(`res.status`, res.status);
 
-    // See server response or error text
-
-    console.log(`res.text`, await res.text());
+    const body = await res.text();
     if (!res.ok) {
+        if (body.includes("Account already exists")) {
+            //ignore
+            return {};
+        }
         console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
-        console.error(await res.text());
+        console.error(body);
         throw new Error(res);
     }
 
-    let jsonResponse = await res.json();
-    // console.log(`jsonResponse`, jsonResponse);
-
-    // if (jsonResponse.name && jsonResponse.name.includes('Error')) {
-    //     console.error(`${jsonResponse.name} - Creating pod for ${nameValue} failed: ${jsonResponse.message}`);
-    // }
-    // else {
-        // console.log(`Pod for ${nameValue} created successfully`);
-    // }
+    const jsonResponse = JSON.parse(body);
+    return jsonResponse;
 }
 
-function copyPodFile(account, localFilePath, localPodDir, podFileRelative) {
+async function uploadPodFile(account, fileContent, podFileRelative) {
+    console.log(`   Will upload file to account ${account}, pod path "${podFileRelative}"`);
+
+    const res = await fetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'text/plain' },
+        body: fileContent,
+    });
+
+    console.log(`res.ok`, res.ok);
+    console.log(`res.status`, res.status);
+    const body = await res.text();
+    console.log(`res.text`, body);
+    if (!res.ok) {
+        console.error(`${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`);
+        console.error(body);
+        throw new Error(res);
+    }
+}
+
+function copyPodFileCheat(account, localFilePath, localPodDir, podFileRelative) {
+    //cheat: does not use solid, just modifies the local CSS dir!
     const podFilePath = `${localPodDir}/${podFileRelative}`;
     fs.copyFileSync(localFilePath, podFilePath);
     console.log(`   cp ${genDataDir + file} ${podFilePath}`);
@@ -139,7 +154,8 @@ function copyPodFile(account, localFilePath, localPodDir, podFileRelative) {
     console.log(`   created ${podFileAcl}`);
 }
 
-function writePodFile(account, fileContent, localPodDir, podFileRelative) {
+function writePodFileCheat(account, fileContent, localPodDir, podFileRelative) {
+    //cheat: does not use solid, just modifies the local CSS dir!
     console.log(`   Will write to account ${account}, pod file ${podFileRelative}...`);
 
     const podFilePath = `${localPodDir}/${podFileRelative}`;
@@ -237,7 +253,7 @@ async function main() {
                 //     return;
                 // }
 
-                copyPodFile(account, genDataDir + 'person.nq', localPodDir, 'person.nq');
+                copyPodFileCheat(account, genDataDir + 'person.nq', localPodDir, 'person.nq');
             }
         }
     }
@@ -247,7 +263,8 @@ async function main() {
             const account = `user${i}`;
             await createPod(account);
             const localPodDir = `${cssDataDir}${account}`;
-            writePodFile(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
+            // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
+            await uploadPodFile(account, "DUMMY DATA FOR "+account, 'dummy.txt');
         }
     }
 }
