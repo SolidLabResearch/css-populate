@@ -3,6 +3,7 @@
 import fs from "fs";
 import readline from "readline";
 import yargs from 'yargs'
+import crypto from 'crypto'
 import {hideBin} from "yargs/helpers";
 import fetch from 'node-fetch';
 
@@ -50,7 +51,6 @@ const argv = yargs(hideBin(process.argv))
     .check((argv, options) => {
         if (argv.source === 'dir' && !argv.dir) {
             return "--source dir requires --dir";
-            return "--source dir requires --data";
         }
         if (argv.source === 'generate' && !argv.count) {
             return "--source generate requires --count";
@@ -197,6 +197,17 @@ function parseTurtleLine(line) {
     }
 }
 
+function generate_content(byteCount) {
+    return crypto.randomBytes(byteCount).toString('base64');
+    // const c = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    // const cl = c.length;
+    // let res = '';
+    // for (let i = 0; i < byteCount; i++ ) {
+    //     res += c.charAt(Math.floor(Math.random()*cl));
+    // }
+    // return res;
+}
+
 //Example person file:
 //  /users/wvdemeer/pod-generator/out-fragments/http/localhost_3000/www.ldbc.eu/ldbc_socialnet/1.0/data/pers*.nq
 async function main() {
@@ -258,6 +269,14 @@ async function main() {
         }
     }
 
+    const files = [];
+    files.push(['1k.txt', generate_content(1000)]);
+    files.push(['10k.txt', generate_content(10_000)]);
+    files.push(['100k.txt', generate_content(100_000)]);
+    files.push(['1M.txt', generate_content(1000_000)]);
+    files.push(['10M.txt', generate_content(10_000_000)]);
+    files.push(['100M.txt', generate_content(100_000_000)]);
+
     if (argv.source === 'generate') {
         for (let i = 0; i < generateCount; i++) {
             const account = `user${i}`;
@@ -265,6 +284,10 @@ async function main() {
             const localPodDir = `${cssDataDir}${account}`;
             // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
             await uploadPodFile(account, "DUMMY DATA FOR "+account, 'dummy.txt');
+
+            for (const [fileName, fileContent] of files) {
+                await uploadPodFile(account, fileContent, fileName);
+            }
         }
     }
 }
@@ -273,11 +296,11 @@ async function main() {
 //(though on my test system with node v15.14.0 it works, and on another system with node v17.5.0 it doesn't)
 //so we will simply not check. That means you don't want to import this module by mistake.
 // if (require.main === module) {
-    try {
-        await main(process.argv[2], process.argv[3]);
-        process.exit(0);
-    } catch (err) {
-        console.error(err);
-        process.exit(1);
-    }
+try {
+    await main(process.argv[2], process.argv[3]);
+    process.exit(0);
+} catch (err) {
+    console.error(err);
+    process.exit(1);
+}
 // }
