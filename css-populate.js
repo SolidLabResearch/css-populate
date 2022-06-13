@@ -198,7 +198,9 @@ function parseTurtleLine(line) {
 }
 
 function generate_content(byteCount) {
-    return crypto.randomBytes(byteCount).toString('base64');
+    return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
+    // return crypto.randomBytes(byteCount).toString('base64');
+
     // const c = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
     // const cl = c.length;
     // let res = '';
