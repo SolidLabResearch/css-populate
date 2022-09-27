@@ -272,12 +272,10 @@ async function main() {
     }
 
     const files = [];
-    files.push(['1k.txt', generate_content(1000)]);
-    files.push(['10k.txt', generate_content(10_000)]);
-    files.push(['100k.txt', generate_content(100_000)]);
-    files.push(['1M.txt', generate_content(1000_000)]);
-    files.push(['10M.txt', generate_content(10_000_000)]);
-    files.push(['100M.txt', generate_content(100_000_000)]);
+    // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
+    for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]) {
+        files.push([`${size}.rnd`, generate_content(size)]);
+    }
 
     if (argv.source === 'generate') {
         for (let i = 0; i < generateCount; i++) {
