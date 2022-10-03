@@ -273,8 +273,9 @@ async function main() {
 
     const files = [];
     // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
-    for (const size of [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]) {
-        files.push([`${size}.rnd`, generate_content(size)]);
+    for (const size of ['10', '100', '1_000', '10_000', '100_000', '1_000_000', '10_000_000']) {
+        const size_int = parseInt(size.replaceAll('_', ''));
+        files.push([`${size}.rnd`, generate_content(size_int)]);
     }
 
     if (argv.source === 'generate') {
