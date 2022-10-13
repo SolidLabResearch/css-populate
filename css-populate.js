@@ -7,6 +7,8 @@ import crypto from 'crypto'
 import {hideBin} from "yargs/helpers";
 import fetch from 'node-fetch';
 
+import { createDpopHeader, generateDpopKeyPair, buildAuthenticatedFetch } from '@inrupt/solid-client-authn-core';
+
 const argv = yargs(hideBin(process.argv))
     .option('url', {
         alias: 'u',
@@ -109,10 +111,71 @@ async function createPod(nameValue) {
     return jsonResponse;
 }
 
-async function uploadPodFile(account, fileContent, podFileRelative) {
+async function createUserToken(account, password) {
+    //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
+    const res = await fetch(`${cssBaseUrl}idp/credentials/`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+            name: account,
+            email: `${account}@example.com`,
+            password: 'password',
+        }),
+    });
+
+    const body = await res.text();
+    if (!res.ok) {
+        if (body.includes(`Could not create token for ${account}`)) {
+            //ignore
+            return {};
+        }
+        console.error(`${res.status} - Creating token for ${account} failed:`);
+        console.error(body);
+        throw new Error(res);
+    }
+
+    const { id, secret } = JSON.parse(body);
+    return { id, secret };
+}
+
+async function getUserAuthFetch(account, token) {
+    //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
+    const { id, secret } = token;
+
+    const dpopKey = await generateDpopKeyPair();
+    const authString = `${encodeURIComponent(id)}:${encodeURIComponent(secret)}`;
+
+    const url = `${cssBaseUrl}.oidc/token`; //ideally, fetch this from token_endpoint in .well-known/openid-configuration
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            authorization: `Basic ${Buffer.from(authString).toString('base64')}`,
+            'content-type': 'application/x-www-form-urlencoded',
+            dpop: await createDpopHeader(url, 'POST', dpopKey),
+        },
+        body: 'grant_type=client_credentials&scope=webid',
+    });
+
+    const body = await res.text();
+    if (!res.ok) {
+        if (body.includes(`Could not create access token for ${account}`)) {
+            //ignore
+            return {};
+        }
+        console.error(`${res.status} - Creating access token for ${account} failed:`);
+        console.error(body);
+        throw new Error(res);
+    }
+
+    const { access_token: accessToken, expiresIn: expires_in } = JSON.parse(body);
+    const authFetch = await buildAuthenticatedFetch(fetch, accessToken, { dpopKey });
+    return authFetch;
+}
+
+async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
     console.log(`   Will upload file to account ${account}, pod path "${podFileRelative}"`);
 
-    const res = await fetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
+    const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
         method: 'PUT',
         headers: { 'content-type': 'text/plain' },
         body: fileContent,
@@ -282,12 +345,14 @@ async function main() {
         for (let i = 0; i < generateCount; i++) {
             const account = `user${i}`;
             await createPod(account);
+            const token = createUserToken(account);
+            const authFetch = getUserAuthFetch(account, token);
             const localPodDir = `${cssDataDir}${account}`;
             // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
-            await uploadPodFile(account, "DUMMY DATA FOR "+account, 'dummy.txt');
+            await uploadPodFile(account, "DUMMY DATA FOR "+account, 'dummy.txt', authFetch);
 
             for (const [fileName, fileContent] of files) {
-                await uploadPodFile(account, fileContent, fileName);
+                await uploadPodFile(account, fileContent, fileName, authFetch);
             }
         }
     }
