@@ -174,7 +174,12 @@ async function getUserAuthFetch(account, token) {
 
     const { access_token: accessToken, expires_in: expiresIn } = JSON.parse(body);
     const authFetch = await buildAuthenticatedFetch(fetch, accessToken, { dpopKey });
-    // console.log(`account=${account} id=${id} secret=${secret} expiresIn=${expiresIn} accessToken=${accessToken}`);
+    // console.log(`Created Access Token using CSS token:`);
+    // console.log(`account=${account}`);
+    // console.log(`id=${id}`);
+    // console.log(`secret=${secret}`);
+    // console.log(`expiresIn=${expiresIn}`);
+    // console.log(`accessToken=${accessToken}`);
     return authFetch;
 }
 
@@ -183,14 +188,16 @@ async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
 
     const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
         method: 'PUT',
+        headers: { 'content-type': podFileRelative.endsWith('.txt') ? 'text/plain' : 'application/octet-stream' },
         // headers: { 'content-type': 'text/plain' },
+        // headers: { 'content-type': 'application/octet-stream' },
         body: fileContent,
     });
 
-    console.log(`res.ok`, res.ok);
-    console.log(`res.status`, res.status);
+    // console.log(`res.ok`, res.ok);
+    // console.log(`res.status`, res.status);
     const body = await res.text();
-    console.log(`res.text`, body);
+    // console.log(`res.text`, body);
     if (!res.ok) {
         console.error(`${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`);
         console.error(body);
