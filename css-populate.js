@@ -169,6 +169,7 @@ async function getUserAuthFetch(account, token) {
 
     const { access_token: accessToken, expiresIn: expires_in } = JSON.parse(body);
     const authFetch = await buildAuthenticatedFetch(fetch, accessToken, { dpopKey });
+    // console.log(`account=${account} id=${id} secret=${secret} expiresIn=${expiresIn} accessToken=${accessToken}`);
     return authFetch;
 }
 
@@ -345,8 +346,8 @@ async function main() {
         for (let i = 0; i < generateCount; i++) {
             const account = `user${i}`;
             await createPod(account);
-            const token = createUserToken(account);
-            const authFetch = getUserAuthFetch(account, token);
+            const token = await createUserToken(account);
+            const authFetch = await getUserAuthFetch(account, token);
             const localPodDir = `${cssDataDir}${account}`;
             // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
             await uploadPodFile(account, "DUMMY DATA FOR "+account, 'dummy.txt', authFetch);
