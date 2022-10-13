@@ -68,6 +68,11 @@ const cssDataDir = argv.source === 'dir' ? argv.data.endsWith('/') ? argv.data :
 const generatedDataBaseDir = argv.source === 'dir' ? argv.dir.endsWith('/') ? argv.dir : argv.dir+'/' : null;
 const generateCount = argv.count;
 
+
+function accountEmail(account) {
+    return `${account}@example.org`;
+}
+
 /**
  *
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
@@ -76,7 +81,7 @@ async function createPod(nameValue) {
     console.log(`Will create pod "${nameValue}"...`);
     const settings =  {
         podName: nameValue,
-        email: `${nameValue}@example.org`,
+        email: accountEmail(nameValue),
         password: 'password',
         confirmPassword: 'password',
         register: true,
@@ -117,9 +122,9 @@ async function createUserToken(account, password) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-            name: account,
-            email: `${account}@example.com`,
-            password: 'password',
+            name: `token-css-populate-${account}`,
+            email: accountEmail(account),
+            password: password,
         }),
     });
 
@@ -167,7 +172,7 @@ async function getUserAuthFetch(account, token) {
         throw new Error(res);
     }
 
-    const { access_token: accessToken, expiresIn: expires_in } = JSON.parse(body);
+    const { access_token: accessToken, expires_in: expiresIn } = JSON.parse(body);
     const authFetch = await buildAuthenticatedFetch(fetch, accessToken, { dpopKey });
     // console.log(`account=${account} id=${id} secret=${secret} expiresIn=${expiresIn} accessToken=${accessToken}`);
     return authFetch;
@@ -178,7 +183,7 @@ async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
 
     const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
         method: 'PUT',
-        headers: { 'content-type': 'text/plain' },
+        // headers: { 'content-type': 'text/plain' },
         body: fileContent,
     });
 
@@ -346,7 +351,7 @@ async function main() {
         for (let i = 0; i < generateCount; i++) {
             const account = `user${i}`;
             await createPod(account);
-            const token = await createUserToken(account);
+            const token = await createUserToken(account, 'password');
             const authFetch = await getUserAuthFetch(account, token);
             const localPodDir = `${cssDataDir}${account}`;
             // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
