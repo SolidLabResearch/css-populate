@@ -205,56 +205,24 @@ async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
     }
 }
 
-function copyPodFileCheat(account, localFilePath, localPodDir, podFileRelative) {
-    //cheat: does not use solid, just modifies the local CSS dir!
-    const podFilePath = `${localPodDir}/${podFileRelative}`;
-    fs.copyFileSync(localFilePath, podFilePath);
-    console.log(`   cp ${genDataDir + file} ${podFilePath}`);
+async function downloadPodFile(account, podFileRelative, authFetch) {
+    console.log(`   Will download file from account ${account}, pod path "${podFileRelative}"`);
 
-    const podFileAcl = `${podFilePath}.acl`;
-    fs.writeFileSync(podFileAcl, `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
-@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+    const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
+        method: 'GET',
+        headers: { 'accept': podFileRelative.endsWith('.txt') ? 'text/plain' : 'application/octet-stream' },
+    });
 
-<#public>
-    a acl:Authorization;
-    acl:accessTo <./${podFileRelative}>;
-    acl:agentClass foaf:Agent;
-    acl:mode acl:Read.
-
-<#owner>
-    a acl:Authorization;
-    acl:accessTo <./${podFileRelative}>;
-    acl:agent <http://css:3000/${account}/profile/card#me>;
-    acl:mode acl:Read, acl:Write, acl:Control.
-`);
-    console.log(`   created ${podFileAcl}`);
-}
-
-function writePodFileCheat(account, fileContent, localPodDir, podFileRelative) {
-    //cheat: does not use solid, just modifies the local CSS dir!
-    console.log(`   Will write to account ${account}, pod file ${podFileRelative}...`);
-
-    const podFilePath = `${localPodDir}/${podFileRelative}`;
-    fs.writeFileSync(localFilePath, fileContent);
-    console.log(`   created ${podFilePath}`);
-
-    const podFileAcl = `${podFilePath}.acl`;
-    fs.writeFileSync(podFileAcl, `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
-@prefix foaf: <http://xmlns.com/foaf/0.1/>.
-
-<#public>
-    a acl:Authorization;
-    acl:accessTo <./${podFileRelative}>;
-    acl:agentClass foaf:Agent;
-    acl:mode acl:Read.
-
-<#owner>
-    a acl:Authorization;
-    acl:accessTo <./${podFileRelative}>;
-    acl:agent <http://css:3000/${account}/profile/card#me>;
-    acl:mode acl:Read, acl:Write, acl:Control.
-`);
-    console.log(`   created ${podFileAcl}`);
+    // console.log(`res.ok`, res.ok);
+    // console.log(`res.status`, res.status);
+    // console.log(`res.text`, body);
+    if (!res.ok) {
+        const body = await res.text();
+        console.error(`${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`);
+        console.error(body);
+        throw new Error(res);
+    }
+    return await res.text();
 }
 
 function parseTurtleLine(line) {
@@ -273,7 +241,7 @@ function parseTurtleLine(line) {
     }
 }
 
-function generate_content(byteCount) {
+function generateContent(byteCount) {
     return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
     // return crypto.randomBytes(byteCount).toString('base64');
 
@@ -284,6 +252,26 @@ function generate_content(byteCount) {
     //     res += c.charAt(Math.floor(Math.random()*cl));
     // }
     // return res;
+}
+
+async function makeAclReadPublic(account, podFilePattern, authFetch) {
+    const aclContent = await downloadPodFile(account, '.acl', authFetch)
+
+    //Quick and dirty acl edit
+    let newAclContent = "";
+    let seenPublic = false;
+    for (const line of aclContent.split(/\n/)) {
+        if (line.trim() === '<#public>') {
+            seenPublic = true;
+        }
+        if (seenPublic && line.trim() === '') {
+            newAclContent += `    acl:accessTo <./${podFilePattern}>;`
+            newAclContent += '    acl:mode acl:Read.'
+        }
+        newAclContent += line + '\n';
+    }
+
+    await uploadPodFile(account, newAclContent, '.acl', authFetch)
 }
 
 //Example person file:
@@ -342,7 +330,9 @@ async function main() {
                 //     return;
                 // }
 
-                copyPodFileCheat(account, genDataDir + 'person.nq', localPodDir, 'person.nq');
+                const token = await createUserToken(account, 'password');
+                const authFetch = await getUserAuthFetch(account, token);
+                await uploadPodFile(account, genDataDir + 'person.nq', 'person.nq', authFetch);
             }
         }
     }
@@ -351,7 +341,7 @@ async function main() {
     // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
     for (const size of ['10', '100', '1_000', '10_000', '100_000', '1_000_000', '10_000_000']) {
         const size_int = parseInt(size.replaceAll('_', ''));
-        files.push([`${size}.rnd`, generate_content(size_int)]);
+        files.push([`${size}.rnd`, generateContent(size_int)]);
     }
 
     if (argv.source === 'generate') {
@@ -366,6 +356,7 @@ async function main() {
 
             for (const [fileName, fileContent] of files) {
                 await uploadPodFile(account, fileContent, fileName, authFetch);
+                await makeAclReadPublic(account, '*.rnd', authFetch);
             }
         }
     }
