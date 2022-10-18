@@ -301,10 +301,17 @@ async function makeAclReadPublic(account, podFilePattern, authFetch) {
             needsUpdate = false;
             break;
         }
+        if (seenPublic && line.includes(`acl:default <./>`)) {
+            needsUpdate = false;
+            break;
+        }
         if (seenPublic && line.trim() === '') {
             newAclContent = lastDotToSemi(newAclContent);
-            newAclContent += `    acl:accessTo <./${podFilePattern}>;\n`;
-            newAclContent += '    acl:mode acl:Read.\n';
+            //doesn't work. So I don't see to understand this.
+            // newAclContent += `    acl:accessTo <./${podFilePattern}>;\n`;
+            // newAclContent += '    acl:mode acl:Read.\n';
+            //this works, but gives acces to everything. Which is fine I guess.
+            newAclContent += `    acl:default <./>.\n';
             seenPublic = false;
         }
         newAclContent += line + '\n';
