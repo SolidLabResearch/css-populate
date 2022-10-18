@@ -280,9 +280,14 @@ async function makeAclReadPublic(account, podFilePattern, authFetch) {
     //Quick and dirty acl edit
     let newAclContent = "";
     let seenPublic = false;
+    let needsUpdate = true;
     for (const line of aclContent.split(/\n/)) {
         if (line.trim() === '<#public>') {
             seenPublic = true;
+        }
+        if (seenPublic && line.includes(`acl:accessTo <./${podFilePattern}>`)) {
+            needsUpdate = false;
+            break;
         }
         if (seenPublic && line.trim() === '') {
             newAclContent = lastDotToSemi(newAclContent);
@@ -293,8 +298,12 @@ async function makeAclReadPublic(account, podFilePattern, authFetch) {
         newAclContent += line + '\n';
     }
 
-    console.log("Replacing .acl with:\n"+newAclContent+"\n");
-    await uploadPodFile(account, newAclContent, '.acl', authFetch)
+    if (needsUpdate) {
+        console.log("Replacing .acl with:\n" + newAclContent + "\n");
+        await uploadPodFile(account, newAclContent, '.acl', authFetch)
+    } else {
+        console.log(".acl already OK.\n");
+    }
 }
 
 //Example person file:
