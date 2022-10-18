@@ -299,10 +299,10 @@ async function makeAclReadPublic(account, podFilePattern, authFetch) {
     }
 
     if (needsUpdate) {
-        console.log("Replacing .acl with:\n" + newAclContent + "\n");
+        // console.log("Replacing .acl with:\n" + newAclContent + "\n");
         await uploadPodFile(account, newAclContent, '.acl', authFetch)
     } else {
-        console.log(".acl already OK.\n");
+        // console.log(".acl already OK.\n");
     }
 }
 
