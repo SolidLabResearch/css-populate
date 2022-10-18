@@ -200,7 +200,7 @@ async function getUserAuthFetch(account, token) {
 }
 
 async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
-    let retry = false;
+    let retry = true;
     let retryCount = 0;
     while (retry) {
         retry = false;
