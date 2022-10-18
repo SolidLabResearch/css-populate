@@ -73,6 +73,21 @@ function accountEmail(account) {
     return `${account}@example.org`;
 }
 
+/* Quick and dirty content type handling. Obviously needs to be done better. */
+function filenameToContentType(filename) {
+    if (filename.endsWith('.acl')) {
+        //from https://www.w3.org/2008/01/rdf-media-types but unsure if correct for ".acl"
+        return "application/x-turtle";
+    }
+    if (filename.endsWith('.txt')) {
+        return 'text/plain';
+    }
+    // if (filename.endsWith('.???')) {
+    //
+    // }
+    return 'application/octet-stream';
+}
+
 /**
  *
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
@@ -188,9 +203,7 @@ async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
 
     const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
         method: 'PUT',
-        headers: { 'content-type': podFileRelative.endsWith('.txt') ? 'text/plain' : 'application/octet-stream' },
-        // headers: { 'content-type': 'text/plain' },
-        // headers: { 'content-type': 'application/octet-stream' },
+        headers: { 'content-type': filenameToContentType(podFileRelative) },
         body: fileContent,
     });
 
@@ -210,7 +223,7 @@ async function downloadPodFile(account, podFileRelative, authFetch) {
 
     const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
         method: 'GET',
-        headers: { 'accept': podFileRelative.endsWith('.txt') ? 'text/plain' : 'application/octet-stream' },
+        headers: { 'accept': filenameToContentType(podFileRelative) },
     });
 
     // console.log(`res.ok`, res.ok);
