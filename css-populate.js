@@ -200,22 +200,34 @@ async function getUserAuthFetch(account, token) {
 }
 
 async function uploadPodFile(account, fileContent, podFileRelative, authFetch) {
-    console.log(`   Will upload file to account ${account}, pod path "${podFileRelative}"`);
+    let retry = false;
+    let retryCount = 0;
+    while (retry) {
+        retry = false;
+        console.log(`   Will upload file to account ${account}, pod path "${podFileRelative}"`);
 
-    const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
-        method: 'PUT',
-        headers: { 'content-type': filenameToContentType(podFileRelative) },
-        body: fileContent,
-    });
+        const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
+            method: 'PUT',
+            headers: {'content-type': filenameToContentType(podFileRelative)},
+            body: fileContent,
+        });
 
-    // console.log(`res.ok`, res.ok);
-    // console.log(`res.status`, res.status);
-    const body = await res.text();
-    // console.log(`res.text`, body);
-    if (!res.ok) {
-        console.error(`${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`);
-        console.error(body);
-        throw new Error(res);
+        // console.log(`res.ok`, res.ok);
+        // console.log(`res.status`, res.status);
+        const body = await res.text();
+        // console.log(`res.text`, body);
+        if (!res.ok) {
+            console.error(`${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`);
+            console.error(body);
+
+            if (retryCount < 5) {
+                retry = true;
+                retryCount += 1;
+                console.error("Got 408 Request Timeout. That's strange... Will retry. (max 5 times)");
+            } else {
+                throw new Error(res);
+            }
+        }
     }
 }
 
