@@ -77,7 +77,8 @@ function accountEmail(account) {
 function filenameToContentType(filename) {
     if (filename.endsWith('.acl')) {
         //from https://www.w3.org/2008/01/rdf-media-types but unsure if correct for ".acl"
-        return "application/x-turtle";
+        // return "application/x-turtle";
+        return "text/turtle";  // what CSS expects for .acl
     }
     if (filename.endsWith('.txt')) {
         return 'text/plain';
@@ -235,6 +236,7 @@ async function downloadPodFile(account, podFileRelative, authFetch) {
         console.error(body);
         throw new Error(res);
     }
+    //console.log("Got pod file with Content-Type: "+res.headers.get('Content-Type'));
     return await res.text();
 }
 
@@ -267,6 +269,11 @@ function generateContent(byteCount) {
     // return res;
 }
 
+function lastDotToSemi(input) {
+    //another dirty hack
+    return input.replace(/.(\s*)$/, ';$1');
+}
+
 async function makeAclReadPublic(account, podFilePattern, authFetch) {
     const aclContent = await downloadPodFile(account, '.acl', authFetch)
 
@@ -278,12 +285,15 @@ async function makeAclReadPublic(account, podFilePattern, authFetch) {
             seenPublic = true;
         }
         if (seenPublic && line.trim() === '') {
-            newAclContent += `    acl:accessTo <./${podFilePattern}>;`
-            newAclContent += '    acl:mode acl:Read.'
+            newAclContent = lastDotToSemi(newAclContent);
+            newAclContent += `    acl:accessTo <./${podFilePattern}>;\n`;
+            newAclContent += '    acl:mode acl:Read.\n';
+            seenPublic = false;
         }
         newAclContent += line + '\n';
     }
 
+    console.log("Replacing .acl with:\n"+newAclContent+"\n");
     await uploadPodFile(account, newAclContent, '.acl', authFetch)
 }
 
