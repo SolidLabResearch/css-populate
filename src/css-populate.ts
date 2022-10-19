@@ -210,6 +210,7 @@ async function getUserAuthFetch(
   const { access_token: accessToken, expires_in: expiresIn } = JSON.parse(body);
   // @ts-ignore   buildAuthenticatedFetch uses js fetch, but we use node-fetch
   const authFetch: typeof fetch = await buildAuthenticatedFetch(
+    // @ts-ignore   buildAuthenticatedFetch uses js fetch, but we use node-fetch
     fetch,
     accessToken,
     { dpopKey }
