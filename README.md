@@ -1,12 +1,12 @@
 # CSS Populate
 
-
 Tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.
 
 Install:
 
 ```
 npm install
+npm run build
 npm link
 css-populate --help
 ```
@@ -16,11 +16,15 @@ Help:
 ```
 $ css-populate --help
 Options:
-      --version    Show version number                                 [boolean]
-  -u, --url        Base URL of the CSS                       [string] [required]
-  -d, --data       Data dir of the CSS                       [string] [required]
-  -g, --generated  Dir with the generated data               [string] [required]
-      --help       Show help
+      --version  Show version number                                   [boolean]
+  -u, --url      Base URL of the CSS                         [string] [required]
+  -d, --data     Data dir of the CSS                                    [string]
+  -s, --source   Source of generated data
+                                [string] [required] [choices: "dir", "generate"]
+  -g, --dir      Dir with the generated data                            [string]
+  -c, --count    Number of users/pods to generate                       [number]
+      --help     Show help                                             [boolean]
+
 ```
 
 # Create generated data

@@ -1,4 +1,9 @@
-.idea
+.idea/**
+# But do save prettier config and name
+!.idea/prettier.xml
+!.idea/.name
+
+bin/
 
 # Logs
 logs

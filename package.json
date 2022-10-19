@@ -2,16 +2,18 @@
   "name": "css-populate",
   "version": "1.0.0",
   "description": "Tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
-  "type": "module",
+  "type":"module",
   "bin": {
-    "css-populate": "./css-populate.js"
+    "css-populate": "./bin/css-populate.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc": "tsc",
+    "build": "tsc && chmod u+x ./bin/css-populate.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SolidLabInfra/css-populate.git"
+    "url": "git+https://github.com/SolidLabResearch/css-populate.git"
   },
   "keywords": [
     "solid"
@@ -26,5 +28,12 @@
     "@inrupt/solid-client-authn-core": "^1.12.2",
     "node-fetch": "^3.2.0",
     "yargs": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.2",
+    "@types/node-fetch": "^2.6.2",
+    "@types/yargs": "^17.0.13",
+    "typescript": "^4.8.4",
+    "prettier": "2.6.0"
   }
 }
