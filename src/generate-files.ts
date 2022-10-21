@@ -1,11 +1,7 @@
 import crypto from "crypto";
-import {
-  createPod,
-  createUserToken,
-  getUserAuthFetch,
-  makeAclReadPublic,
-  uploadPodFile,
-} from "./css-fetch.js";
+import { createPod, makeAclReadPublic, uploadPodFile } from "./css-upload.js";
+import { downloadPodFile } from "./css-download.js";
+import { createUserToken, getUserAuthFetch } from "./solid-auth.js";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer

@@ -6,6 +6,7 @@ import {
   generateDpopKeyPair,
 } from "@inrupt/solid-client-authn-core";
 import { ResponseError } from "./error.js";
+import { downloadPodFile } from "./css-download.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -75,93 +76,6 @@ export async function createPod(
   return jsonResponse;
 }
 
-interface UserToken {
-  id: string;
-  secret: string;
-}
-export async function createUserToken(
-  cssBaseUrl: string,
-  account: string,
-  password: string
-): Promise<UserToken> {
-  //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
-  const res = await fetch(`${cssBaseUrl}idp/credentials/`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      name: `token-css-populate-${account}`,
-      email: accountEmail(account),
-      password: password,
-    }),
-  });
-
-  const body = await res.text();
-  if (!res.ok) {
-    // if (body.includes(`Could not create token for ${account}`)) {
-    //     //ignore
-    //     return {};
-    // }
-    console.error(`${res.status} - Creating token for ${account} failed:`);
-    console.error(body);
-    throw new ResponseError(res, body);
-  }
-
-  const { id, secret } = JSON.parse(body);
-  return { id, secret };
-}
-
-export async function getUserAuthFetch(
-  cssBaseUrl: string,
-  account: string,
-  token: UserToken
-): Promise<typeof fetch> {
-  //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
-  const { id, secret } = token;
-
-  const dpopKey = await generateDpopKeyPair();
-  const authString = `${encodeURIComponent(id)}:${encodeURIComponent(secret)}`;
-
-  const url = `${cssBaseUrl}.oidc/token`; //ideally, fetch this from token_endpoint in .well-known/openid-configuration
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      authorization: `Basic ${Buffer.from(authString).toString("base64")}`,
-      "content-type": "application/x-www-form-urlencoded",
-      dpop: await createDpopHeader(url, "POST", dpopKey),
-    },
-    body: "grant_type=client_credentials&scope=webid",
-  });
-
-  const body = await res.text();
-  if (!res.ok) {
-    // if (body.includes(`Could not create access token for ${account}`)) {
-    //     //ignore
-    //     return {};
-    // }
-    console.error(
-      `${res.status} - Creating access token for ${account} failed:`
-    );
-    console.error(body);
-    throw new ResponseError(res, body);
-  }
-
-  const { access_token: accessToken, expires_in: expiresIn } = JSON.parse(body);
-  // @ts-ignore   buildAuthenticatedFetch uses js fetch, but we use node-fetch
-  const authFetch: typeof fetch = await buildAuthenticatedFetch(
-    // @ts-ignore   buildAuthenticatedFetch uses js fetch, but we use node-fetch
-    fetch,
-    accessToken,
-    { dpopKey }
-  );
-  // console.log(`Created Access Token using CSS token:`);
-  // console.log(`account=${account}`);
-  // console.log(`id=${id}`);
-  // console.log(`secret=${secret}`);
-  // console.log(`expiresIn=${expiresIn}`);
-  // console.log(`accessToken=${accessToken}`);
-  return authFetch;
-}
-
 export async function uploadPodFile(
   cssBaseUrl: string,
   account: string,
@@ -204,36 +118,6 @@ export async function uploadPodFile(
       }
     }
   }
-}
-
-export async function downloadPodFile(
-  cssBaseUrl: string,
-  account: string,
-  podFileRelative: string,
-  authFetch: typeof fetch
-) {
-  console.log(
-    `   Will download file from account ${account}, pod path "${podFileRelative}"`
-  );
-
-  const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
-    method: "GET",
-    headers: { accept: filenameToContentType(podFileRelative) },
-  });
-
-  // console.log(`res.ok`, res.ok);
-  // console.log(`res.status`, res.status);
-  // console.log(`res.text`, body);
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(
-      `${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`
-    );
-    console.error(body);
-    throw new ResponseError(res, body);
-  }
-  //console.log("Got pod file with Content-Type: "+res.headers.get('Content-Type'));
-  return await res.text();
 }
 
 function lastDotToSemi(input: string): string {
