@@ -1,5 +1,4 @@
 import fetch from "node-fetch";
-import { Response, BodyInit } from "node-fetch";
 import {
   buildAuthenticatedFetch,
   createDpopHeader,

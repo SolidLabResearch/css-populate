@@ -7,6 +7,7 @@ import { generatePodsWithLdbcFiles } from "./ldbc-files.js";
 import { generatePodsAndFiles } from "./generate-files.js";
 
 const argv = yargs(hideBin(process.argv))
+  .usage("Usage: $0 --url <url> --source <source> ...")
   .option("url", {
     alias: "u",
     type: "string",
@@ -44,6 +45,7 @@ const argv = yargs(hideBin(process.argv))
     }
     return true;
   })
+  .wrap(120)
   .parseSync();
 
 const cssBaseUrl = argv.url.endsWith("/") ? argv.url : argv.url + "/";

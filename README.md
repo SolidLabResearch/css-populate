@@ -15,21 +15,27 @@ Help:
 
 ```
 $ css-populate --help
-Options:
-      --version  Show version number                                   [boolean]
-  -u, --url      Base URL of the CSS                         [string] [required]
-  -d, --data     Data dir of the CSS                                    [string]
-  -s, --source   Source of generated data
-                                [string] [required] [choices: "dir", "generate"]
-  -g, --dir      Dir with the generated data                            [string]
-  -c, --count    Number of users/pods to generate                       [number]
-      --help     Show help                                             [boolean]
+Usage: css-populate --url <url> --source <source> ...
 
+Options:
+      --version  Show version number                                                                           [boolean]
+  -u, --url      Base URL of the CSS                                                                 [string] [required]
+  -s, --source   Source of generated data                               [string] [required] [choices: "dir", "generate"]
+  -g, --dir      Dir with the generated data                                                                    [string]
+  -c, --count    Number of users/pods to generate                                                               [number]
+      --help     Show help                                                                                     [boolean]
 ```
 
-# Create generated data
+# Data for --source 'generate'
 
-The "Dir with the generated data" can be generated with:
+When `--source 'generate'` is specified, `--count` is required to specify the number of users to generate.
+For each generated user, a pod is generated and filled with dummy files containing random data, with various sizes ranges from 10 byte to 10MB.
+
+
+# Data for --source 'dir'
+
+For `--source 'dir'`, the `--dir` option requires a "dir with the generated data". 
+This dir is generated with [ldbc-snb-decentralized](https://github.com/rubensworks/ldbc-snb-decentralized.js):
 
 ```
 git clone https://github.com/rubensworks/ldbc-snb-decentralized.js.git
@@ -50,4 +56,3 @@ Generated data by [ldbc-snb-decentralized](https://github.com/rubensworks/ldbc-s
 # License
 
 This code is copyrighted by [Ghent University – imec](http://idlab.ugent.be/) and released under the [MIT license](http://opensource.org/licenses/MIT).
-
