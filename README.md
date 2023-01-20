@@ -15,14 +15,27 @@ Help:
 
 ```
 $ css-populate --help
-Usage: css-populate --url <url> --source <source> ...
+Usage: css-populate --url <url> --generate-xxx --generate-yyy ...
+
+CSS Server:
+  -u, --url         Base URL of the CSS                                                              [string] [required]
+      --user-count  Number of users/pods to generate/populate                                        [number] [required]
+
+Generate users:
+      --generate-users  Generate users. If not specified, it is assumed users have already been generated.
+                                                                                              [boolean] [default: false]
+
+Generate .rnd Content:
+      --generate-rnd  Generate files with random bin data named 10.rnd, 100.rnd, ...  10_000_000.rnd
+                                                                                              [boolean] [default: false]
+      --delete-count  Number of files for delete test to generate                                  [number] [default: 0]
+
+Generate Content from LDBC:
+      --generate-from-ldbc-dir  Generate content based on LDBC dir                            [boolean] [default: false]
+      --dir                     Dir with the generated data                                                     [string]
 
 Options:
       --version  Show version number                                                                           [boolean]
-  -u, --url      Base URL of the CSS                                                                 [string] [required]
-  -s, --source   Source of generated data                               [string] [required] [choices: "dir", "generate"]
-  -g, --dir      Dir with the generated data                                                                    [string]
-  -c, --count    Number of users/pods to generate                                                               [number]
       --help     Show help                                                                                     [boolean]
 ```
 

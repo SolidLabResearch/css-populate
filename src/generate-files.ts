@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { createPod, makeAclReadPublic, uploadPodFile } from "./css-upload.js";
 import { downloadPodFile } from "./css-download.js";
 import { createUserToken, getUserAuthFetch } from "./solid-auth.js";
+import { AuthFetchCache } from "./auth-fetch-cache.js";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -17,6 +18,7 @@ function generateContent(byteCount: number): ArrayBuffer {
 }
 
 export async function generatePodsAndFiles(
+  authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   generateCount: number
 ) {
@@ -37,17 +39,15 @@ export async function generatePodsAndFiles(
 
   for (let i = 0; i < generateCount; i++) {
     const account = `user${i}`;
-    await createPod(cssBaseUrl, account);
-    const token = await createUserToken(cssBaseUrl, account, "password");
-    const authFetch = await getUserAuthFetch(cssBaseUrl, account, token);
+    const authFetch = await authFetchCache.getAuthFetcher(i);
     // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
-    await uploadPodFile(
-      cssBaseUrl,
-      account,
-      "DUMMY DATA FOR " + account,
-      "dummy.txt",
-      authFetch
-    );
+    // await uploadPodFile(
+    //   cssBaseUrl,
+    //   account,
+    //   "DUMMY DATA FOR " + account,
+    //   "dummy.txt",
+    //   authFetch
+    // );
 
     for (const [fileName, fileContent] of files) {
       await uploadPodFile(

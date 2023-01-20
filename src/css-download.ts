@@ -1,11 +1,5 @@
-import fetch from "node-fetch";
-import { Response, BodyInit } from "node-fetch";
-import {
-  buildAuthenticatedFetch,
-  createDpopHeader,
-  generateDpopKeyPair,
-} from "@inrupt/solid-client-authn-core";
 import { ResponseError } from "./error.js";
+import { AnyFetchType } from "./generic-fetch.js";
 
 /* Quick and dirty content type handling. Obviously needs to be done better. */
 function filenameToContentType(filename: string): string {
@@ -27,7 +21,7 @@ export async function downloadPodFile(
   cssBaseUrl: string,
   account: string,
   podFileRelative: string,
-  authFetch: typeof fetch
+  authFetch: AnyFetchType
 ) {
   console.log(
     `   Will download file from account ${account}, pod path "${podFileRelative}"`

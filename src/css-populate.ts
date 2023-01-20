@@ -5,43 +5,77 @@ import { hideBin } from "yargs/helpers";
 
 import { generatePodsWithLdbcFiles } from "./ldbc-files.js";
 import { generatePodsAndFiles } from "./generate-files.js";
+import { generateUsers } from "./generate-users.js";
+import { AuthFetchCache } from "./auth-fetch-cache.js";
+import { AnyFetchType, es6fetch } from "./generic-fetch.js";
+import nodeFetch from "node-fetch";
 
 const argv = yargs(hideBin(process.argv))
-  .usage("Usage: $0 --url <url> --source <source> ...")
+  .usage("Usage: $0 --url <url> --generate-xxx --generate-yyy ...")
   .option("url", {
+    group: "CSS Server:",
     alias: "u",
     type: "string",
     description: "Base URL of the CSS",
     demandOption: true,
   })
-  .option("source", {
-    alias: "s",
-    type: "string",
-    description: "Source of generated data",
-    choices: ["dir", "generate"],
+  .option("user-count", {
+    group: "CSS Server:",
+    type: "number",
+    description: "Number of users/pods to generate/populate",
     demandOption: true,
   })
+  .option("generate-users", {
+    group: "Generate users:",
+    type: "boolean",
+    description:
+      "Generate users. If not specified, it is assumed users have already been generated.",
+    default: false,
+    demandOption: false,
+  })
+  .option("generate-rnd", {
+    group: "Generate .rnd Content:",
+    type: "boolean",
+    description:
+      "Generate files with random bin data named 10.rnd, 100.rnd, ...  10_000_000.rnd",
+    default: false,
+    demandOption: false,
+  })
+  .option("delete-count", {
+    group: "Generate .rnd Content:",
+    type: "number",
+    description: "Number of files for delete test to generate",
+    demandOption: false,
+    default: 0,
+    implies: ["generate-rnd"],
+  })
+  .option("generate-from-ldbc-dir", {
+    group: "Generate Content from LDBC:",
+    type: "boolean",
+    description: "Generate content based on LDBC dir",
+    default: false,
+    demandOption: false,
+  })
   .option("dir", {
-    alias: "g",
+    group: "Generate Content from LDBC:",
     type: "string",
     description: "Dir with the generated data",
     demandOption: false,
-    conflicts: ["count"],
-  })
-  .option("count", {
-    alias: "c",
-    type: "number",
-    description: "Number of users/pods to generate",
-    demandOption: false,
-    conflicts: ["dir"],
+    implies: ["generate-from-ldbc-dir"],
   })
   .help()
   .check((argv, options) => {
-    if (argv.source === "dir" && !argv.dir) {
-      return "--source dir requires --dir";
+    if (argv.generateUsers && !argv.userCount) {
+      return "--generate-rnd requires --user-count";
     }
-    if (argv.source === "generate" && !argv.count) {
-      return "--source generate requires --count";
+    if (argv.generateRnd && !argv.userCount) {
+      return "--generate-rnd requires --user-count";
+    }
+    if (argv.generateFromLdbcDir && !argv.dir) {
+      return "--generate-from-ldbc-dir generate requires --dir";
+    }
+    if (!argv.generateFromLdbcDir && !argv.generateRnd) {
+      return "select at least one --generate-xxx option";
     }
     return true;
   })
@@ -55,15 +89,27 @@ const generatedDataBaseDir =
       ? argv.dir
       : argv.dir + "/"
     : null;
-const generateCount = argv.count || 1;
+const usercount = argv.userCount || 1;
 
 async function main() {
-  if (argv.source === "dir" && generatedDataBaseDir) {
-    await generatePodsWithLdbcFiles(cssBaseUrl, generatedDataBaseDir);
+  const fetcher: AnyFetchType = true ? nodeFetch : es6fetch;
+
+  const authFetchCache = new AuthFetchCache(cssBaseUrl, true, "all", fetcher);
+
+  if (argv.generateUsers) {
+    await generateUsers(authFetchCache, cssBaseUrl, usercount);
   }
 
-  if (argv.source === "generate") {
-    await generatePodsAndFiles(cssBaseUrl, generateCount);
+  if (argv.generateRnd) {
+    await generatePodsAndFiles(authFetchCache, cssBaseUrl, usercount);
+  }
+
+  if (argv.generateFromLdbcDir && generatedDataBaseDir) {
+    await generatePodsWithLdbcFiles(
+      authFetchCache,
+      cssBaseUrl,
+      generatedDataBaseDir
+    );
   }
 }
 

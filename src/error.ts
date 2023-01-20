@@ -1,7 +1,7 @@
-import { Response } from "node-fetch";
+import { AnyFetchResponseType } from "./generic-fetch.js";
 
 export class ResponseError extends Error {
-  constructor(response: Response, responseBody: string) {
+  constructor(response: AnyFetchResponseType, responseBody: string) {
     const shortResponseBody =
       responseBody.length > 150
         ? responseBody.substring(0, 150) + "..."

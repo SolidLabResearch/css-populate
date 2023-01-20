@@ -1,12 +1,8 @@
 import fetch from "node-fetch";
-import { Response, BodyInit } from "node-fetch";
-import {
-  buildAuthenticatedFetch,
-  createDpopHeader,
-  generateDpopKeyPair,
-} from "@inrupt/solid-client-authn-core";
 import { ResponseError } from "./error.js";
 import { downloadPodFile } from "./css-download.js";
+import { AuthFetchCache } from "./auth-fetch-cache.js";
+import { AnyFetchType } from "./generic-fetch.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -30,10 +26,12 @@ function filenameToContentType(filename: string): string {
 
 /**
  *
+ * @param {string} authFetchCache The AuthFetchCache
  * @param {string} cssBaseUrl The base URL of the CSS server
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
  */
 export async function createPod(
+  authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   nameValue: string
 ): Promise<Object> {
@@ -79,9 +77,9 @@ export async function createPod(
 export async function uploadPodFile(
   cssBaseUrl: string,
   account: string,
-  fileContent: BodyInit,
+  fileContent: string | Buffer,
   podFileRelative: string,
-  authFetch: typeof fetch
+  authFetch: AnyFetchType
 ) {
   let retry = true;
   let retryCount = 0;
@@ -129,7 +127,7 @@ export async function makeAclReadPublic(
   cssBaseUrl: string,
   account: string,
   podFilePattern: string,
-  authFetch: typeof fetch
+  authFetch: AnyFetchType
 ) {
   const aclContent = await downloadPodFile(
     cssBaseUrl,

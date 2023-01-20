@@ -1,6 +1,6 @@
 {
   "name": "css-populate",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
   "type":"module",
   "bin": {
