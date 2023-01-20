@@ -1,27 +1,11 @@
 import fetch from "node-fetch";
 import { ResponseError } from "./error.js";
-import { downloadPodFile } from "./css-download.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { AnyFetchType } from "./generic-fetch.js";
+import { CONTENT_TYPE_ACL } from "./content-type.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
-}
-
-/* Quick and dirty content type handling. Obviously needs to be done better. */
-function filenameToContentType(filename: string): string {
-  if (filename.endsWith(".acl")) {
-    //from https://www.w3.org/2008/01/rdf-media-types but unsure if correct for ".acl"
-    // return "application/x-turtle";
-    return "text/turtle"; // what CSS expects for .acl
-  }
-  if (filename.endsWith(".txt")) {
-    return "text/plain";
-  }
-  // if (filename.endsWith('.???')) {
-  //
-  // }
-  return "application/octet-stream";
 }
 
 /**
@@ -79,7 +63,8 @@ export async function uploadPodFile(
   account: string,
   fileContent: string | Buffer,
   podFileRelative: string,
-  authFetch: AnyFetchType
+  authFetch: AnyFetchType,
+  contentType: string
 ) {
   let retry = true;
   let retryCount = 0;
@@ -91,7 +76,7 @@ export async function uploadPodFile(
 
     const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
       method: "PUT",
-      headers: { "content-type": filenameToContentType(podFileRelative) },
+      headers: { "content-type": contentType },
       body: fileContent,
     });
 
@@ -123,51 +108,91 @@ function lastDotToSemi(input: string): string {
   return input.replace(/.(\s*)$/, ";$1");
 }
 
-export async function makeAclReadPublic(
+//OLD DIRTY FUNCTION (remove)
+// export async function makeAclReadPublic(
+//   cssBaseUrl: string,
+//   account: string,
+//   podFilePattern: string,
+//   authFetch: AnyFetchType
+// ) {
+//   const aclContent = await downloadPodFile(
+//     cssBaseUrl,
+//     account,
+//     ".acl",
+//     authFetch
+//   );
+//
+//   //Quick and dirty acl edit
+//   let newAclContent = "";
+//   let seenPublic = false;
+//   let needsUpdate = true;
+//   for (const line of aclContent.split(/\n/)) {
+//     if (line.trim() === "<#public>") {
+//       seenPublic = true;
+//     }
+//     if (seenPublic && line.includes(`acl:accessTo <./${podFilePattern}>`)) {
+//       needsUpdate = false;
+//       break;
+//     }
+//     if (seenPublic && line.includes(`acl:default <./>`)) {
+//       needsUpdate = false;
+//       break;
+//     }
+//     if (seenPublic && line.trim() === "") {
+//       newAclContent = lastDotToSemi(newAclContent);
+//       //doesn't work. So I don't see to understand this.
+//       // newAclContent += `    acl:accessTo <./${podFilePattern}>;\n`;
+//       // newAclContent += '    acl:mode acl:Read.\n';
+//       //this works, but gives access to everything. Which is fine I guess.
+//       newAclContent += `    acl:default <./>.\n`;
+//       seenPublic = false;
+//     }
+//     newAclContent += line + "\n";
+//   }
+//
+//   if (needsUpdate) {
+//     // console.log("Replacing .acl with:\n" + newAclContent + "\n");
+//     await uploadPodFile(cssBaseUrl, account, newAclContent, ".acl", authFetch);
+//   } else {
+//     // console.log(".acl already OK.\n");
+//   }
+// }
+
+export async function addAclFile(
   cssBaseUrl: string,
   account: string,
-  podFilePattern: string,
-  authFetch: AnyFetchType
+  authFetch: AnyFetchType,
+  aclFileBaseName: string,
+  targetFilePattern: string,
+  publicRead: boolean = true,
+  publicWrite: boolean = false
 ) {
-  const aclContent = await downloadPodFile(
+  const serverDomainName = new URL(cssBaseUrl).hostname;
+  const newAclContent = `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+
+${
+  publicRead
+    ? `<#public>
+  a acl:Authorization;
+  acl:accessTo <./${targetFilePattern}>;
+  acl:agentClass foaf:Agent;
+  acl:mode acl:Read${publicWrite ? ", acl:Write, acl:Control" : ""}.`
+    : ""
+}
+<#owner>
+    a acl:Authorization;
+    acl:accessTo <./${targetFilePattern}>;
+    acl:agent <https://${serverDomainName}/${account}/profile/card#me>;
+    acl:mode acl:Read, acl:Write, acl:Control.
+  `;
+
+  await uploadPodFile(
     cssBaseUrl,
     account,
-    ".acl",
-    authFetch
+    newAclContent,
+    `${aclFileBaseName}.acl`,
+    authFetch,
+    CONTENT_TYPE_ACL
   );
-
-  //Quick and dirty acl edit
-  let newAclContent = "";
-  let seenPublic = false;
-  let needsUpdate = true;
-  for (const line of aclContent.split(/\n/)) {
-    if (line.trim() === "<#public>") {
-      seenPublic = true;
-    }
-    if (seenPublic && line.includes(`acl:accessTo <./${podFilePattern}>`)) {
-      needsUpdate = false;
-      break;
-    }
-    if (seenPublic && line.includes(`acl:default <./>`)) {
-      needsUpdate = false;
-      break;
-    }
-    if (seenPublic && line.trim() === "") {
-      newAclContent = lastDotToSemi(newAclContent);
-      //doesn't work. So I don't see to understand this.
-      // newAclContent += `    acl:accessTo <./${podFilePattern}>;\n`;
-      // newAclContent += '    acl:mode acl:Read.\n';
-      //this works, but gives access to everything. Which is fine I guess.
-      newAclContent += `    acl:default <./>.\n`;
-      seenPublic = false;
-    }
-    newAclContent += line + "\n";
-  }
-
-  if (needsUpdate) {
-    // console.log("Replacing .acl with:\n" + newAclContent + "\n");
-    await uploadPodFile(cssBaseUrl, account, newAclContent, ".acl", authFetch);
-  } else {
-    // console.log(".acl already OK.\n");
-  }
 }

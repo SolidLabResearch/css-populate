@@ -25,10 +25,15 @@ Generate users:
       --generate-users  Generate users. If not specified, it is assumed users have already been generated.
                                                                                               [boolean] [default: false]
 
-Generate .rnd Content:
-      --generate-rnd  Generate files with random bin data named 10.rnd, 100.rnd, ...  10_000_000.rnd
+Generate Variable Size Content:
+      --generate-variable-size  Generate 7 files with random data of increasing size: 10.rnd, ...  10_000_000.rnd
                                                                                               [boolean] [default: false]
-      --delete-count  Number of files for delete test to generate                                  [number] [default: 0]
+
+Generate Fixed Size Content:
+      --generate-fixed-size  Generate a configurable number of files of configurable fixed size
+                                                                                              [boolean] [default: false]
+      --file-count           Number of files to generate                                           [number] [default: 0]
+      --file-size            Size of files to generate                                             [number] [default: 0]
 
 Generate Content from LDBC:
       --generate-from-ldbc-dir  Generate content based on LDBC dir                            [boolean] [default: false]

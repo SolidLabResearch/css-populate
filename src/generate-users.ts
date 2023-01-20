@@ -1,10 +1,8 @@
-import crypto from "crypto";
-import { createPod, makeAclReadPublic, uploadPodFile } from "./css-upload.js";
-import { downloadPodFile } from "./css-download.js";
-import { createUserToken, getUserAuthFetch } from "./solid-auth.js";
+import { createPod, uploadPodFile } from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
+import { CONTENT_TYPE_TXT } from "./content-type.js";
 
-export async function generateUsers(
+export async function generatePodsAndUsers(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   generateCount: number
@@ -19,7 +17,8 @@ export async function generateUsers(
       account,
       "DUMMY DATA FOR " + account,
       "dummy.txt",
-      authFetch
+      authFetch,
+      CONTENT_TYPE_TXT
     );
   }
 }

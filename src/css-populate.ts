@@ -4,8 +4,11 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
 import { generatePodsWithLdbcFiles } from "./ldbc-files.js";
-import { generatePodsAndFiles } from "./generate-files.js";
-import { generateUsers } from "./generate-users.js";
+import {
+  generateFixedSizeFiles,
+  generateVariableSizeFiles,
+} from "./generate-files.js";
+import { generatePodsAndUsers } from "./generate-users.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
 import nodeFetch from "node-fetch";
@@ -33,21 +36,37 @@ const argv = yargs(hideBin(process.argv))
     default: false,
     demandOption: false,
   })
-  .option("generate-rnd", {
-    group: "Generate .rnd Content:",
+  .option("generate-variable-size", {
+    group: "Generate Variable Size Content:",
     type: "boolean",
     description:
-      "Generate files with random bin data named 10.rnd, 100.rnd, ...  10_000_000.rnd",
+      "Generate 7 files with random data of increasing size: 10.rnd, ...  10_000_000.rnd",
     default: false,
     demandOption: false,
   })
-  .option("delete-count", {
-    group: "Generate .rnd Content:",
+  .option("generate-fixed-size", {
+    group: "Generate Fixed Size Content:",
+    type: "boolean",
+    description:
+      "Generate a configurable number of files of configurable fixed size",
+    default: false,
+    demandOption: false,
+  })
+  .option("file-count", {
+    group: "Generate Fixed Size Content:",
     type: "number",
-    description: "Number of files for delete test to generate",
+    description: "Number of files to generate",
     demandOption: false,
     default: 0,
-    implies: ["generate-rnd"],
+    implies: ["generate-fixed-size"],
+  })
+  .option("file-size", {
+    group: "Generate Fixed Size Content:",
+    type: "number",
+    description: "Size of files to generate",
+    demandOption: false,
+    default: 0,
+    implies: ["generate-fixed-size"],
   })
   .option("generate-from-ldbc-dir", {
     group: "Generate Content from LDBC:",
@@ -66,15 +85,25 @@ const argv = yargs(hideBin(process.argv))
   .help()
   .check((argv, options) => {
     if (argv.generateUsers && !argv.userCount) {
-      return "--generate-rnd requires --user-count";
+      return "--generate-users requires --user-count";
     }
-    if (argv.generateRnd && !argv.userCount) {
-      return "--generate-rnd requires --user-count";
+    if (argv.generateFixedSize && !argv.userCount) {
+      return "--generate-fixed-size requires --user-count";
+    }
+    if (argv.generateFixedSize && !argv.fileSize) {
+      return "--generate-fixed-size requires --file-size";
+    }
+    if (argv.generateFixedSize && !argv.fileCount) {
+      return "--generate-fixed-size requires --file-count";
     }
     if (argv.generateFromLdbcDir && !argv.dir) {
       return "--generate-from-ldbc-dir generate requires --dir";
     }
-    if (!argv.generateFromLdbcDir && !argv.generateRnd) {
+    if (
+      !argv.generateFromLdbcDir &&
+      !argv.generateVariableSize &&
+      !argv.generateFixedSize
+    ) {
       return "select at least one --generate-xxx option";
     }
     return true;
@@ -90,6 +119,8 @@ const generatedDataBaseDir =
       : argv.dir + "/"
     : null;
 const usercount = argv.userCount || 1;
+const fileSize = argv.fileSize || 10;
+const fileCount = argv.fileCount || 1;
 
 async function main() {
   const fetcher: AnyFetchType = true ? nodeFetch : es6fetch;
@@ -97,11 +128,21 @@ async function main() {
   const authFetchCache = new AuthFetchCache(cssBaseUrl, true, "all", fetcher);
 
   if (argv.generateUsers) {
-    await generateUsers(authFetchCache, cssBaseUrl, usercount);
+    await generatePodsAndUsers(authFetchCache, cssBaseUrl, usercount);
   }
 
-  if (argv.generateRnd) {
-    await generatePodsAndFiles(authFetchCache, cssBaseUrl, usercount);
+  if (argv.generateVariableSize) {
+    await generateVariableSizeFiles(authFetchCache, cssBaseUrl, usercount);
+  }
+
+  if (argv.generateFixedSize) {
+    await generateFixedSizeFiles(
+      authFetchCache,
+      cssBaseUrl,
+      usercount,
+      fileCount,
+      fileSize
+    );
   }
 
   if (argv.generateFromLdbcDir && generatedDataBaseDir) {

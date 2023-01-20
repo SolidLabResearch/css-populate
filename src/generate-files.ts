@@ -1,8 +1,7 @@
 import crypto from "crypto";
-import { createPod, makeAclReadPublic, uploadPodFile } from "./css-upload.js";
-import { downloadPodFile } from "./css-download.js";
-import { createUserToken, getUserAuthFetch } from "./solid-auth.js";
+import { addAclFile, createPod, uploadPodFile } from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
+import { CONTENT_TYPE_BYTE } from "./content-type.js";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -17,12 +16,12 @@ function generateContent(byteCount: number): ArrayBuffer {
   // return res;
 }
 
-export async function generatePodsAndFiles(
+export async function generateVariableSizeFiles(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
-  generateCount: number
+  userCount: number
 ) {
-  const files: Array<[string, ArrayBuffer]> = [];
+  const files: Array<[string, Buffer]> = [];
   // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
   for (const size of [
     "10",
@@ -34,13 +33,12 @@ export async function generatePodsAndFiles(
     "10_000_000",
   ]) {
     const size_int = parseInt(size.replaceAll("_", ""));
-    files.push([`${size}.rnd`, generateContent(size_int)]);
+    files.push([`${size}.rnd`, Buffer.from(generateContent(size_int))]);
   }
 
-  for (let i = 0; i < generateCount; i++) {
+  for (let i = 0; i < userCount; i++) {
     const account = `user${i}`;
     const authFetch = await authFetchCache.getAuthFetcher(i);
-    // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
     // await uploadPodFile(
     //   cssBaseUrl,
     //   account,
@@ -53,11 +51,58 @@ export async function generatePodsAndFiles(
       await uploadPodFile(
         cssBaseUrl,
         account,
-        Buffer.from(fileContent),
+        fileContent,
         fileName,
-        authFetch
+        authFetch,
+        CONTENT_TYPE_BYTE
       );
-      await makeAclReadPublic(cssBaseUrl, account, "*.rnd", authFetch);
     }
+
+    await addAclFile(
+      cssBaseUrl,
+      account,
+      authFetch,
+      "rnd",
+      "*.rnd",
+      true,
+      false
+    );
+  }
+}
+
+export async function generateFixedSizeFiles(
+  authFetchCache: AuthFetchCache,
+  cssBaseUrl: string,
+  userCount: number,
+  fileCount: number,
+  fileSize: number
+) {
+  const fileContent = Buffer.from(generateContent(fileSize));
+
+  for (let i = 0; i < userCount; i++) {
+    const account = `user${i}`;
+    const authFetch = await authFetchCache.getAuthFetcher(i);
+
+    for (let j = 0; j < fileCount; j++) {
+      const fileName = `fixed_${j}`;
+      await uploadPodFile(
+        cssBaseUrl,
+        account,
+        fileContent,
+        fileName,
+        authFetch,
+        CONTENT_TYPE_BYTE
+      );
+    }
+
+    await addAclFile(
+      cssBaseUrl,
+      account,
+      authFetch,
+      "fixed",
+      "fixed_*",
+      true,
+      true
+    );
   }
 }
