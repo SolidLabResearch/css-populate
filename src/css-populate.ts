@@ -84,25 +84,25 @@ const argv = yargs(hideBin(process.argv))
   })
   .help()
   .check((argv, options) => {
-    if (argv["generate-users"] && !argv.userCount) {
+    if (argv.generateUsers && !argv.userCount) {
       return "--generate-users requires --user-count";
     }
-    if (argv["generate-fixed-size"] && !argv.userCount) {
+    if (argv.generateFixedSize && !argv.userCount) {
       return "--generate-fixed-size requires --user-count";
     }
-    if (argv["generate-fixed-size"] && !argv.fileSize) {
+    if (argv.generateFixedSize && !argv.fileSize) {
       return "--generate-fixed-size requires --file-size";
     }
-    if (argv["generate-fixed-size"] && !argv.fileCount) {
+    if (argv.generateFixedSize && !argv.fileCount) {
       return "--generate-fixed-size requires --file-count";
     }
-    if (argv["generate-from-ldbc-dir"] && !argv.dir) {
+    if (argv.generateFromLdbcDir && !argv.dir) {
       return "--generate-from-ldbc-dir generate requires --dir";
     }
     if (
-      !argv["generate-from-ldbc-dir"] &&
-      !argv["generate-variable-size"] &&
-      !argv["generate-fixed-size"]
+      !argv.generateFromLdbcDir &&
+      !argv.generateVariableSize &&
+      !argv.generateFixedSize
     ) {
       return "select at least one --generate-xxx option";
     }
