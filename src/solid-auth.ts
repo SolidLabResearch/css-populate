@@ -65,13 +65,15 @@ export async function createUserToken(
   return { id, secret };
 }
 
-export function stillUsableAccessToken(accessToken: AccessToken): boolean {
+export function stillUsableAccessToken(
+  accessToken: AccessToken,
+  deadline_s: number = 5 * 60
+): boolean {
   if (!accessToken.token || !accessToken.expire) {
     return false;
   }
   const now = new Date().getTime();
   const expire = accessToken.expire.getTime();
-  const deadline_s = 5 * 60;
   //accessToken.expire should be 5 minutes in the future at least
   return expire > now && expire - now > deadline_s;
 }

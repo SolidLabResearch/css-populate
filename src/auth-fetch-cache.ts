@@ -2,6 +2,7 @@ import {
   AccessToken,
   createUserToken,
   getUserAuthFetch,
+  stillUsableAccessToken,
   UserToken,
 } from "./solid-auth.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
@@ -33,11 +34,21 @@ export class AuthFetchCache {
     this.fetcher = fetcher;
   }
 
+  expireAccessToken(userId: number) {
+    //remove access token if it is about to expire
+    const at = this.authAccessTokenByUser[userId];
+    if (at && !stillUsableAccessToken(at, 60)) {
+      this.authAccessTokenByUser[userId] = null;
+      this.authFetchersByUser[userId] = null;
+    }
+  }
+
   async getAuthFetcher(userId: number): Promise<AnyFetchType> {
     this.useCount++;
     if (!this.authenticate) {
       return this.fetcher;
     }
+    this.expireAccessToken(userId);
     const account = `user${userId}`;
     let userToken = null;
     let accessToken = null;
