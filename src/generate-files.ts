@@ -98,6 +98,7 @@ export async function generateFixedSizeFiles(
         i < 2
       );
     }
+    const stopTime1 = new Date().getTime();
 
     await addAclFile(
       cssBaseUrl,
@@ -110,12 +111,13 @@ export async function generateFixedSizeFiles(
       i < 2
     );
 
-    const stopTime = new Date().getTime();
-    if (i < 2) {
+    const stopTime2 = new Date().getTime();
+    if (i < 100) {
+      var duration1_s = (stopTime1 - startTime) / 1000.0;
+      var duration2_s = (stopTime2 - stopTime1) / 1000.0;
       console.log(
-        `Uploading fixed files of size ${fileSize}byte for user ${i} took ${
-          (stopTime - startTime) / 1000.0
-        }s`
+        `Uploading ${fileCount} fixed files of size ${fileSize}byte for user ${i} took ${duration1_s}s` +
+          ` (+ ${duration2_s}s for 1 acl file)`
       );
     }
   }
