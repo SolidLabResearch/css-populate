@@ -82,6 +82,7 @@ export async function generateFixedSizeFiles(
   const fileContent = Buffer.from(generateContent(fileSize));
 
   for (let i = 0; i < userCount; i++) {
+    const startTime = new Date().getTime();
     const account = `user${i}`;
     const authFetch = await authFetchCache.getAuthFetcher(i);
 
@@ -108,5 +109,14 @@ export async function generateFixedSizeFiles(
       true,
       i < 2
     );
+
+    const stopTime = new Date().getTime();
+    if (i < 2) {
+      console.log(
+        `Uploading fixed files of size ${fileSize}byte for user ${i} took ${
+          (stopTime - startTime) / 1000.0
+        }s`
+      );
+    }
   }
 }
