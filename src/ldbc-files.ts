@@ -83,7 +83,8 @@ export async function generatePodsWithLdbcFiles(
         genDataDir + "person.nq",
         "person.nq",
         authFetch,
-        CONTENT_TYPE_BYTE //TODO use correct content type
+        CONTENT_TYPE_BYTE, //TODO use correct content type
+        persIndex < 2
       );
 
       await addAclFile(
@@ -93,7 +94,8 @@ export async function generatePodsWithLdbcFiles(
         "person",
         "person.nq",
         true,
-        false
+        false,
+        persIndex < 2
       );
     }
   }

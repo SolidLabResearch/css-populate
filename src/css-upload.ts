@@ -17,9 +17,12 @@ function accountEmail(account: string): string {
 export async function createPod(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
-  nameValue: string
+  nameValue: string,
+  debugLogging: boolean = false
 ): Promise<Object> {
-  console.log(`Will create pod "${nameValue}"...`);
+  if (debugLogging) {
+    console.log(`Will create pod "${nameValue}"...`);
+  }
   const settings = {
     podName: nameValue,
     email: accountEmail(nameValue),
@@ -30,7 +33,9 @@ export async function createPod(
     createWebId: true,
   };
 
-  console.log(`   POSTing to: ${cssBaseUrl}idp/register/`);
+  if (debugLogging) {
+    console.log(`   POSTing to: ${cssBaseUrl}idp/register/`);
+  }
   //console.log('      settings', settings)
 
   // @ts-ignore
@@ -64,15 +69,18 @@ export async function uploadPodFile(
   fileContent: string | Buffer,
   podFileRelative: string,
   authFetch: AnyFetchType,
-  contentType: string
+  contentType: string,
+  debugLogging: boolean = false
 ) {
   let retry = true;
   let retryCount = 0;
   while (retry) {
     retry = false;
-    console.log(
-      `   Will upload file to account ${account}, pod path "${podFileRelative}"`
-    );
+    if (debugLogging) {
+      console.log(
+        `   Will upload file to account ${account}, pod path "${podFileRelative}"`
+      );
+    }
 
     const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
       method: "PUT",
@@ -165,7 +173,8 @@ export async function addAclFile(
   aclFileBaseName: string,
   targetFilePattern: string,
   publicRead: boolean = true,
-  publicWrite: boolean = false
+  publicWrite: boolean = false,
+  debugLogging: boolean = false
 ) {
   const serverDomainName = new URL(cssBaseUrl).hostname;
   const newAclContent = `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
@@ -193,6 +202,7 @@ ${
     newAclContent,
     `${aclFileBaseName}.acl`,
     authFetch,
-    CONTENT_TYPE_ACL
+    CONTENT_TYPE_ACL,
+    debugLogging
   );
 }

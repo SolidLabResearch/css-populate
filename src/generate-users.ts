@@ -18,7 +18,8 @@ export async function generatePodsAndUsers(
       "DUMMY DATA FOR " + account,
       "dummy.txt",
       authFetch,
-      CONTENT_TYPE_TXT
+      CONTENT_TYPE_TXT,
+      i < 2
     );
   }
 }

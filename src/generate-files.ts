@@ -54,7 +54,8 @@ export async function generateVariableSizeFiles(
         fileContent,
         fileName,
         authFetch,
-        CONTENT_TYPE_BYTE
+        CONTENT_TYPE_BYTE,
+        i < 2
       );
     }
 
@@ -65,7 +66,8 @@ export async function generateVariableSizeFiles(
       "rnd",
       "*.rnd",
       true,
-      false
+      false,
+      i < 2
     );
   }
 }
@@ -91,7 +93,8 @@ export async function generateFixedSizeFiles(
         fileContent,
         fileName,
         authFetch,
-        CONTENT_TYPE_BYTE
+        CONTENT_TYPE_BYTE,
+        i < 2
       );
     }
 
@@ -102,7 +105,8 @@ export async function generateFixedSizeFiles(
       "fixed",
       "fixed_*",
       true,
-      true
+      true,
+      i < 2
     );
   }
 }
