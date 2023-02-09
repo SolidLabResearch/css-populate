@@ -75,7 +75,7 @@ export function stillUsableAccessToken(
   const now = new Date().getTime();
   const expire = accessToken.expire.getTime();
   //accessToken.expire should be 5 minutes in the future at least
-  return expire > now && expire - now > deadline_s;
+  return expire > now && expire - now > deadline_s * 1000;
 }
 
 export async function getUserAuthFetch(
