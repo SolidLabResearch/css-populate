@@ -170,10 +170,10 @@ export async function addAclFile(
   cssBaseUrl: string,
   account: string,
   authFetch: AnyFetchType,
-  aclFileBaseName: string,
-  targetFilePattern: string,
+  targetFilename: string,
   publicRead: boolean = true,
   publicWrite: boolean = false,
+  publicControl: boolean = false,
   debugLogging: boolean = false
 ) {
   const serverDomainName = new URL(cssBaseUrl).hostname;
@@ -184,14 +184,16 @@ ${
   publicRead
     ? `<#public>
   a acl:Authorization;
-  acl:accessTo <./${targetFilePattern}>;
+  acl:accessTo <./${targetFilename}>;
   acl:agentClass foaf:Agent;
-  acl:mode acl:Read${publicWrite ? ", acl:Write, acl:Control" : ""}.`
+  acl:mode acl:Read${publicWrite ? ", acl:Write" : ""}${
+        publicControl ? ", acl:Control" : ""
+      }.`
     : ""
 }
 <#owner>
     a acl:Authorization;
-    acl:accessTo <./${targetFilePattern}>;
+    acl:accessTo <./${targetFilename}>;
     acl:agent <https://${serverDomainName}/${account}/profile/card#me>;
     acl:mode acl:Read, acl:Write, acl:Control.
   `;
@@ -200,7 +202,7 @@ ${
     cssBaseUrl,
     account,
     newAclContent,
-    `${aclFileBaseName}.acl`,
+    `${targetFilename}.acl`,
     authFetch,
     CONTENT_TYPE_ACL,
     debugLogging

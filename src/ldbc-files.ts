@@ -27,7 +27,8 @@ function parseTurtleLine(line: string): any {
 export async function generatePodsWithLdbcFiles(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
-  generatedDataBaseDir: string
+  generatedDataBaseDir: string,
+  addAclFiles: boolean = false
 ) {
   //Example person file:
   //  /users/wvdemeer/pod-generator/out-fragments/http/localhost_3000/www.ldbc.eu/ldbc_socialnet/1.0/data/pers*.nq
@@ -87,16 +88,18 @@ export async function generatePodsWithLdbcFiles(
         persIndex < 2
       );
 
-      await addAclFile(
-        cssBaseUrl,
-        account,
-        authFetch,
-        "person",
-        "person.nq",
-        true,
-        false,
-        persIndex < 2
-      );
+      if (addAclFiles) {
+        await addAclFile(
+          cssBaseUrl,
+          account,
+          authFetch,
+          "person.nq",
+          true,
+          false,
+          false,
+          persIndex < 2
+        );
+      }
     }
   }
 }

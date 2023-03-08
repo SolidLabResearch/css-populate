@@ -75,6 +75,13 @@ const argv = yargs(hideBin(process.argv))
     default: false,
     demandOption: false,
   })
+  .option("add-acl-files", {
+    group: "Generate Fixed Size Content:",
+    type: "boolean",
+    description: "Upload a corresponding .acl file for each generated file",
+    default: false,
+    demandOption: false,
+  })
   .option("dir", {
     group: "Generate Content from LDBC:",
     type: "string",
@@ -121,6 +128,7 @@ const generatedDataBaseDir =
 const usercount = argv.userCount || 1;
 const fileSize = argv.fileSize || 10;
 const fileCount = argv.fileCount || 1;
+const addAclFiles = argv.addAclFiles || false;
 
 async function main() {
   const fetcher: AnyFetchType = true ? nodeFetch : es6fetch;
@@ -132,7 +140,12 @@ async function main() {
   }
 
   if (argv.generateVariableSize) {
-    await generateVariableSizeFiles(authFetchCache, cssBaseUrl, usercount);
+    await generateVariableSizeFiles(
+      authFetchCache,
+      cssBaseUrl,
+      usercount,
+      addAclFiles
+    );
   }
 
   if (argv.generateFixedSize) {
@@ -141,7 +154,8 @@ async function main() {
       cssBaseUrl,
       usercount,
       fileCount,
-      fileSize
+      fileSize,
+      addAclFiles
     );
   }
 
@@ -149,7 +163,8 @@ async function main() {
     await generatePodsWithLdbcFiles(
       authFetchCache,
       cssBaseUrl,
-      generatedDataBaseDir
+      generatedDataBaseDir,
+      addAclFiles
     );
   }
 }

@@ -19,7 +19,8 @@ function generateContent(byteCount: number): ArrayBuffer {
 export async function generateVariableSizeFiles(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
-  userCount: number
+  userCount: number,
+  addAclFiles: boolean = false
 ) {
   const files: Array<[string, Buffer]> = [];
   // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
@@ -57,18 +58,20 @@ export async function generateVariableSizeFiles(
         CONTENT_TYPE_BYTE,
         i < 2
       );
-    }
 
-    await addAclFile(
-      cssBaseUrl,
-      account,
-      authFetch,
-      "rnd",
-      "*.rnd",
-      true,
-      false,
-      i < 2
-    );
+      if (addAclFiles) {
+        await addAclFile(
+          cssBaseUrl,
+          account,
+          authFetch,
+          fileName,
+          true,
+          false,
+          false,
+          i < 2
+        );
+      }
+    }
   }
 }
 
@@ -77,7 +80,8 @@ export async function generateFixedSizeFiles(
   cssBaseUrl: string,
   userCount: number,
   fileCount: number,
-  fileSize: number
+  fileSize: number,
+  addAclFiles: boolean = false
 ) {
   const fileContent = Buffer.from(generateContent(fileSize));
 
@@ -97,19 +101,21 @@ export async function generateFixedSizeFiles(
         CONTENT_TYPE_BYTE,
         i < 2
       );
+
+      if (addAclFiles) {
+        await addAclFile(
+          cssBaseUrl,
+          account,
+          authFetch,
+          fileName,
+          true,
+          true,
+          false,
+          i < 2
+        );
+      }
     }
     const stopTime1 = new Date().getTime();
-
-    await addAclFile(
-      cssBaseUrl,
-      account,
-      authFetch,
-      "fixed",
-      "fixed_*",
-      true,
-      true,
-      i < 2
-    );
 
     const stopTime2 = new Date().getTime();
     if (i < 100) {
