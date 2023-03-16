@@ -180,7 +180,7 @@ async function main() {
 
   if (argv.generateRdf) {
     await generateRdfFiles(
-      argv.baseRdfFile,
+      argv.baseRdfFile || "error",
       authFetchCache,
       cssBaseUrl,
       usercount,
