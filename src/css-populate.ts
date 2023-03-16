@@ -6,6 +6,7 @@ import { hideBin } from "yargs/helpers";
 import { generatePodsWithLdbcFiles } from "./ldbc-files.js";
 import {
   generateFixedSizeFiles,
+  generateRdfFiles,
   generateVariableSizeFiles,
 } from "./generate-files.js";
 import { generatePodsAndUsers } from "./generate-users.js";
@@ -68,6 +69,21 @@ const argv = yargs(hideBin(process.argv))
     default: 0,
     implies: ["generate-fixed-size"],
   })
+  .option("generate-rdf", {
+    group: "Generate RDF Content:",
+    type: "boolean",
+    description: "Generate RDF files with various content types",
+    default: false,
+    demandOption: false,
+  })
+  .option("base-rdf-file", {
+    group: "Generate RDF Content:",
+    type: "string",
+    description:
+      "Base RDF file to upload. Will be converted into various RDF file formats.",
+    demandOption: false,
+    implies: ["generate-rdf"],
+  })
   .option("generate-from-ldbc-dir", {
     group: "Generate Content from LDBC:",
     type: "boolean",
@@ -104,7 +120,10 @@ const argv = yargs(hideBin(process.argv))
       return "--generate-fixed-size requires --file-count";
     }
     if (argv.generateFromLdbcDir && !argv.dir) {
-      return "--generate-from-ldbc-dir generate requires --dir";
+      return "--generate-from-ldbc-dir requires --dir";
+    }
+    if (argv.generateRdf && !argv.baseRdfFile) {
+      return "--generate-rdf requires --base-rdf-file";
     }
     if (
       !argv.generateFromLdbcDir &&
@@ -131,7 +150,7 @@ const fileCount = argv.fileCount || 1;
 const addAclFiles = argv.addAclFiles || false;
 
 async function main() {
-  const fetcher: AnyFetchType = true ? nodeFetch : es6fetch;
+  const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
 
   const authFetchCache = new AuthFetchCache(cssBaseUrl, true, "all", fetcher);
 
@@ -155,6 +174,16 @@ async function main() {
       usercount,
       fileCount,
       fileSize,
+      addAclFiles
+    );
+  }
+
+  if (argv.generateRdf) {
+    await generateRdfFiles(
+      argv.baseRdfFile,
+      authFetchCache,
+      cssBaseUrl,
+      usercount,
       addAclFiles
     );
   }

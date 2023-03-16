@@ -2,6 +2,11 @@ import crypto from "crypto";
 import { addAclFile, createPod, uploadPodFile } from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { CONTENT_TYPE_BYTE } from "./content-type.js";
+import N3, { StreamWriter } from "n3";
+import fs from "fs";
+import { PassThrough, Stream, Writable } from "stream";
+import * as util from "util";
+import * as StreamPromises from "stream/promises";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -125,6 +130,112 @@ export async function generateFixedSizeFiles(
         `Uploading ${fileCount} fixed files of size ${fileSize}byte for user ${i} took ${duration1_s}s` +
           ` (+ ${duration2_s}s for 1 acl file)`
       );
+    }
+  }
+}
+
+const RDFTypeValues = [
+  "TURTLE",
+  "N_TRIPLES",
+  "RDF_XML",
+  "JSON_LD",
+  "N3",
+  "N_QUADS",
+] as const;
+type RDFType = typeof RDFTypeValues[number];
+const RDFContentTypeMap: { [Property in RDFType]: string } = {
+  TURTLE: "text/turtle",
+  N_TRIPLES: "application/n-triples",
+  RDF_XML: "application/rdf+xml",
+  JSON_LD: "application/ld+json",
+  N3: "text/n3;charset=utf-8",
+  N_QUADS: "application/n-quads",
+};
+const RDFFormatMap: { [Property in RDFType]: string } = {
+  TURTLE: "Turtle",
+  N_TRIPLES: "N-Triples",
+  RDF_XML: "RDF/XML",
+  JSON_LD: "JSON-LD",
+  N3: "Notation3",
+  N_QUADS: "N-Quads",
+};
+const RDFExtMap: { [Property in RDFType]: string } = {
+  TURTLE: "ttl", //or .turtle
+  N_TRIPLES: "ntriples", //or .nt
+  N_QUADS: "nq", //or .nquads
+  RDF_XML: "rdf", //or .rdfxml or .owl
+  JSON_LD: "json", // or .jsonld
+  N3: "n3",
+};
+
+async function convertRdf(
+  inFilename: string,
+  outType: RDFType
+): Promise<Buffer> {
+  const inputStream = fs.createReadStream(inFilename);
+  const streamParser = new N3.StreamParser();
+  inputStream.pipe(streamParser);
+
+  const outStream = new N3.StreamWriter({ format: RDFFormatMap[outType] });
+  streamParser.pipe(outStream);
+
+  const buffers: any[] = [];
+  const writableStream = new WritableStream({
+    write(chunk) {
+      buffers.push(chunk);
+    },
+    close() {},
+    abort(err) {
+      console.log("Sink error:", err);
+    },
+  });
+  await StreamPromises.pipeline(outStream, streamParser);
+  return Buffer.concat(buffers);
+}
+
+export async function generateRdfFiles(
+  inputBaseRdfFile: string,
+  authFetchCache: AuthFetchCache,
+  cssBaseUrl: string,
+  userCount: number,
+  addAclFiles: boolean = false
+) {
+  const fileInfos: { fileName: string; buffer: Buffer; contentType: string }[] =
+    [];
+  for (const rt of RDFTypeValues) {
+    const fileName = `rdf_example_informat_${rt}.${RDFExtMap[rt]}`;
+    const contentType = RDFContentTypeMap[rt];
+    const buffer = await convertRdf(inputBaseRdfFile, rt);
+    fileInfos.push({ fileName, buffer, contentType });
+  }
+
+  for (let i = 0; i < userCount; i++) {
+    const account = `user${i}`;
+    const authFetch = await authFetchCache.getAuthFetcher(i);
+
+    for (const fileInfo of fileInfos) {
+      await uploadPodFile(
+        cssBaseUrl,
+        account,
+        fileInfo.buffer,
+        fileInfo.fileName,
+        authFetch,
+        fileInfo.contentType,
+        i < 2
+      );
+
+      if (addAclFiles) {
+        await addAclFile(
+          cssBaseUrl,
+          account,
+          authFetch,
+          fileInfo.fileName,
+          true,
+          false,
+          false,
+          i < 2
+        );
+      }
     }
   }
 }
