@@ -128,6 +128,7 @@ const argv = yargs(hideBin(process.argv))
     if (
       !argv.generateFromLdbcDir &&
       !argv.generateVariableSize &&
+      !argv.generateRdf &&
       !argv.generateFixedSize
     ) {
       return "select at least one --generate-xxx option";
