@@ -6,7 +6,8 @@ import N3, { StreamWriter } from "n3";
 import fs from "fs";
 import { PassThrough, Stream, Writable } from "stream";
 import * as util from "util";
-import * as StreamPromises from "stream/promises";
+// import * as StreamPromises from "stream/promises";
+import { pipeline } from "node:stream/promises";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -180,17 +181,29 @@ async function convertRdf(
   streamParser.pipe(outStream);
 
   const buffers: any[] = [];
-  const writableStream = new WritableStream({
-    write(chunk) {
+  const writableStream = new Writable({
+    write(chunk, encoding, callback) {
       buffers.push(chunk);
+      callback();
     },
-    close() {},
-    abort(err) {
-      console.log("Sink error:", err);
+    final(callback: (error?: Error | null) => void) {
+      callback();
     },
   });
-  await StreamPromises.pipeline(outStream, streamParser);
+  await pipeline(outStream, writableStream);
   return Buffer.concat(buffers);
+
+  // outStream.pipe(writableStream);
+  //
+  // const bufs = new Promise<Buffer>(function (resolve, reject) {
+  //   writableStream.on("close", () => {
+  //     resolve(Buffer.concat(buffers));
+  //   });
+  //   writableStream.on("error", (e) => {
+  //     reject(e);
+  //   });
+  // });
+  // return await bufs;
 }
 
 export async function generateRdfFiles(
@@ -203,9 +216,16 @@ export async function generateRdfFiles(
   const fileInfos: { fileName: string; buffer: Buffer; contentType: string }[] =
     [];
   for (const rt of RDFTypeValues) {
-    const fileName = `rdf_example_informat_${rt}.${RDFExtMap[rt]}`;
+    const fileName = `rdf_example_${rt}.${RDFExtMap[rt]}`;
     const contentType = RDFContentTypeMap[rt];
-    const buffer = await convertRdf(inputBaseRdfFile, rt);
+    let buffer;
+    try {
+      buffer = await convertRdf(inputBaseRdfFile, rt);
+      console.log(`converted input RDF to ${rt}: ${buffer.byteLength} bytes`);
+    } catch (e) {
+      console.error(`error converting RDF to ${rt}`, e);
+      throw e;
+    }
     fileInfos.push({ fileName, buffer, contentType });
   }
 
