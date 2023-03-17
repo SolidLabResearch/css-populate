@@ -8,6 +8,7 @@ import { PassThrough, Stream, Writable } from "stream";
 import * as util from "util";
 // import * as StreamPromises from "stream/promises";
 import { pipeline } from "node:stream/promises";
+import { JsonLdSerializer } from "jsonld-streaming-serializer";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -162,10 +163,10 @@ const RDFFormatMap: { [Property in RDFType]: string } = {
 };
 const RDFExtMap: { [Property in RDFType]: string } = {
   TURTLE: "ttl", //or .turtle
-  N_TRIPLES: "ntriples", //or .nt
+  N_TRIPLES: "nt", //or .ntriples
   N_QUADS: "nq", //or .nquads
   RDF_XML: "rdf", //or .rdfxml or .owl
-  JSON_LD: "json", // or .jsonld
+  JSON_LD: "jsonld", // or .json
   N3: "n3",
 };
 
@@ -174,11 +175,29 @@ async function convertRdf(
   outType: RDFType
 ): Promise<Buffer> {
   const inputStream = fs.createReadStream(inFilename);
-  const streamParser = new N3.StreamParser();
-  inputStream.pipe(streamParser);
+  const parserStream = new N3.StreamParser();
+  inputStream.pipe(parserStream);
 
-  const outStream = new N3.StreamWriter({ format: RDFFormatMap[outType] });
-  streamParser.pipe(outStream);
+  let serializerStream;
+  switch (outType) {
+    case "TURTLE":
+    case "N_TRIPLES":
+    case "N3":
+    case "N_QUADS": {
+      serializerStream = new N3.StreamWriter({ format: RDFFormatMap[outType] });
+      break;
+    }
+    case "RDF_XML": {
+      throw new Error(`RDF/XML not yet supported`);
+    }
+    case "JSON_LD": {
+      serializerStream = new JsonLdSerializer();
+      break;
+    }
+    default:
+      throw new Error(`unhandled RDFType ${outType}`);
+  }
+  parserStream.pipe(serializerStream);
 
   const buffers: any[] = [];
   const writableStream = new Writable({
@@ -190,7 +209,7 @@ async function convertRdf(
       callback();
     },
   });
-  await pipeline(outStream, writableStream);
+  await pipeline(serializerStream, writableStream);
   return Buffer.concat(buffers);
 
   // outStream.pipe(writableStream);
@@ -216,6 +235,10 @@ export async function generateRdfFiles(
   const fileInfos: { fileName: string; buffer: Buffer; contentType: string }[] =
     [];
   for (const rt of RDFTypeValues) {
+    if (rt === "RDF_XML") {
+      //not supported
+      continue;
+    }
     const fileName = `rdf_example_${rt}.${RDFExtMap[rt]}`;
     const contentType = RDFContentTypeMap[rt];
     let buffer;
