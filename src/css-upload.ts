@@ -33,17 +33,41 @@ export async function createPod(
     createWebId: true,
   };
 
+  let idpPath = `idp`;
+
   if (debugLogging) {
-    console.log(`   POSTing to: ${cssBaseUrl}idp/register/`);
+    console.log(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
   }
-  //console.log('      settings', settings)
 
   // @ts-ignore
-  const res = await fetch(`${cssBaseUrl}idp/register/`, {
+  let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
     method: "POST",
     headers: { "content-type": "application/json", Accept: "application/json" },
     body: JSON.stringify(settings),
   });
+
+  if (res.status == 404) {
+    console.log(
+      `   404 registering user, will try again with alternative path`
+    );
+
+    //assume that idp URL has moved (= new version of CSS specific idp)
+    idpPath = `.account`;
+
+    if (debugLogging) {
+      console.log(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
+    }
+
+    // @ts-ignore
+    res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(settings),
+    });
+  }
 
   // console.log(`res.ok`, res.ok);
   // console.log(`res.status`, res.status);
