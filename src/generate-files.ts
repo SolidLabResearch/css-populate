@@ -1,5 +1,10 @@
 import crypto from "crypto";
-import { addAclFile, createPod, uploadPodFile } from "./css-upload.js";
+import {
+  addAuthZFile,
+  addAuthZFiles,
+  createPod,
+  uploadPodFile,
+} from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { CONTENT_TYPE_BYTE } from "./content-type.js";
 import {
@@ -26,7 +31,8 @@ export async function generateVariableSizeFiles(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   userCount: number,
-  addAclFiles: boolean = false
+  addAclFiles: boolean = false,
+  addAcrFiles: boolean = false
 ) {
   const files: Array<[string, Buffer]> = [];
   // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
@@ -65,18 +71,18 @@ export async function generateVariableSizeFiles(
         i < 2
       );
 
-      if (addAclFiles) {
-        await addAclFile(
-          cssBaseUrl,
-          account,
-          authFetch,
-          fileName,
-          true,
-          false,
-          false,
-          i < 2
-        );
-      }
+      await addAuthZFiles(
+        cssBaseUrl,
+        account,
+        authFetch,
+        fileName,
+        true,
+        false,
+        false,
+        i < 2,
+        addAclFiles,
+        addAcrFiles
+      );
     }
   }
 }
@@ -87,7 +93,8 @@ export async function generateFixedSizeFiles(
   userCount: number,
   fileCount: number,
   fileSize: number,
-  addAclFiles: boolean = false
+  addAclFiles: boolean = false,
+  addAcrFiles: boolean = false
 ) {
   const fileContent = Buffer.from(generateContent(fileSize));
 
@@ -109,7 +116,7 @@ export async function generateFixedSizeFiles(
       );
 
       if (addAclFiles) {
-        await addAclFile(
+        await addAuthZFiles(
           cssBaseUrl,
           account,
           authFetch,
@@ -117,7 +124,9 @@ export async function generateFixedSizeFiles(
           true,
           true,
           false,
-          i < 2
+          i < 2,
+          addAclFiles,
+          addAcrFiles
         );
       }
     }
@@ -140,7 +149,8 @@ export async function generateRdfFiles(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   userCount: number,
-  addAclFiles: boolean = false
+  addAclFiles: boolean = false,
+  addAcrFiles: boolean = false
 ) {
   const fileInfos: { fileName: string; buffer: Buffer; contentType: string }[] =
     [];
@@ -177,18 +187,18 @@ export async function generateRdfFiles(
         i < 2
       );
 
-      if (addAclFiles) {
-        await addAclFile(
-          cssBaseUrl,
-          account,
-          authFetch,
-          fileInfo.fileName,
-          true,
-          false,
-          false,
-          i < 2
-        );
-      }
+      await addAuthZFiles(
+        cssBaseUrl,
+        account,
+        authFetch,
+        fileInfo.fileName,
+        true,
+        false,
+        false,
+        i < 2,
+        addAclFiles,
+        addAcrFiles
+      );
     }
   }
 }

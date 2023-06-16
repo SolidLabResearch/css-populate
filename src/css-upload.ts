@@ -2,7 +2,9 @@ import fetch from "node-fetch";
 import { ResponseError } from "./error.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { AnyFetchType } from "./generic-fetch.js";
-import { CONTENT_TYPE_ACL } from "./content-type.js";
+import { CONTENT_TYPE_ACL, CONTENT_TYPE_ACR } from "./content-type.js";
+import { makeAclContent } from "./wac-acl.js";
+import { makeAcrContent } from "./acp-acr.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -190,7 +192,7 @@ function lastDotToSemi(input: string): string {
 //   }
 // }
 
-export async function addAclFile(
+export async function addAuthZFiles(
   cssBaseUrl: string,
   account: string,
   authFetch: AnyFetchType,
@@ -198,37 +200,85 @@ export async function addAclFile(
   publicRead: boolean = true,
   publicWrite: boolean = false,
   publicControl: boolean = false,
-  debugLogging: boolean = false
+  debugLogging: boolean = false,
+  addAclFiles: boolean = false,
+  addAcrFiles: boolean = false
+) {
+  if (addAclFiles)
+    await addAuthZFile(
+      cssBaseUrl,
+      account,
+      authFetch,
+      targetFilename,
+      publicRead,
+      publicWrite,
+      publicControl,
+      debugLogging,
+      "WAC"
+    );
+  if (addAcrFiles)
+    await addAuthZFile(
+      cssBaseUrl,
+      account,
+      authFetch,
+      targetFilename,
+      publicRead,
+      publicWrite,
+      publicControl,
+      debugLogging,
+      "ACP"
+    );
+}
+
+export async function addAuthZFile(
+  cssBaseUrl: string,
+  account: string,
+  authFetch: AnyFetchType,
+  targetFilename: string,
+  publicRead: boolean = true,
+  publicWrite: boolean = false,
+  publicControl: boolean = false,
+  debugLogging: boolean = false,
+  authZ_type: "ACP" | "WAC" = "ACP"
 ) {
   const serverDomainName = new URL(cssBaseUrl).hostname;
-  const newAclContent = `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
-@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+  let newAuthZContent;
+  let filename;
+  let contentType;
 
-${
-  publicRead
-    ? `<#public>
-  a acl:Authorization;
-  acl:accessTo <./${targetFilename}>;
-  acl:agentClass foaf:Agent;
-  acl:mode acl:Read${publicWrite ? ", acl:Write" : ""}${
-        publicControl ? ", acl:Control" : ""
-      }.`
-    : ""
-}
-<#owner>
-    a acl:Authorization;
-    acl:accessTo <./${targetFilename}>;
-    acl:agent <https://${serverDomainName}/${account}/profile/card#me>;
-    acl:mode acl:Read, acl:Write, acl:Control.
-  `;
+  if (authZ_type == "WAC") {
+    filename = `${targetFilename}.acl`;
+    contentType = CONTENT_TYPE_ACL;
+    newAuthZContent = makeAclContent(
+      serverDomainName,
+      account,
+      authFetch,
+      targetFilename,
+      publicRead,
+      publicWrite,
+      publicControl
+    );
+  } else {
+    filename = `${targetFilename}.acr`;
+    contentType = CONTENT_TYPE_ACR;
+    newAuthZContent = makeAcrContent(
+      serverDomainName,
+      account,
+      authFetch,
+      targetFilename,
+      publicRead,
+      publicWrite,
+      publicControl
+    );
+  }
 
   await uploadPodFile(
     cssBaseUrl,
     account,
-    newAclContent,
-    `${targetFilename}.acl`,
+    newAuthZContent,
+    filename,
     authFetch,
-    CONTENT_TYPE_ACL,
+    contentType,
     debugLogging
   );
 }

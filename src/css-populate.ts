@@ -98,6 +98,13 @@ const argv = yargs(hideBin(process.argv))
     default: false,
     demandOption: false,
   })
+  .option("add-acr-files", {
+    group: "Generate Fixed Size Content:",
+    type: "boolean",
+    description: "Upload a corresponding .acr file for each generated file",
+    default: false,
+    demandOption: false,
+  })
   .option("dir", {
     group: "Generate Content from LDBC:",
     type: "string",
@@ -149,6 +156,7 @@ const usercount = argv.userCount || 1;
 const fileSize = argv.fileSize || 10;
 const fileCount = argv.fileCount || 1;
 const addAclFiles = argv.addAclFiles || false;
+const addAcrFiles = argv.addAcrFiles || false;
 
 async function main() {
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
@@ -164,7 +172,8 @@ async function main() {
       authFetchCache,
       cssBaseUrl,
       usercount,
-      addAclFiles
+      addAclFiles,
+      addAcrFiles
     );
   }
 
@@ -175,7 +184,8 @@ async function main() {
       usercount,
       fileCount,
       fileSize,
-      addAclFiles
+      addAclFiles,
+      addAcrFiles
     );
   }
 
@@ -185,7 +195,8 @@ async function main() {
       authFetchCache,
       cssBaseUrl,
       usercount,
-      addAclFiles
+      addAclFiles,
+      addAcrFiles
     );
   }
 
@@ -194,7 +205,8 @@ async function main() {
       authFetchCache,
       cssBaseUrl,
       generatedDataBaseDir,
-      addAclFiles
+      addAclFiles,
+      addAcrFiles
     );
   }
 }

@@ -1,7 +1,7 @@
 import fs from "fs";
 import readline from "readline";
 
-import { addAclFile, uploadPodFile } from "./css-upload.js";
+import { addAuthZFile, addAuthZFiles, uploadPodFile } from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { CONTENT_TYPE_BYTE } from "./content-type.js";
 
@@ -28,7 +28,8 @@ export async function generatePodsWithLdbcFiles(
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   generatedDataBaseDir: string,
-  addAclFiles: boolean = false
+  addAclFiles: boolean = false,
+  addAcrFiles: boolean = false
 ) {
   //Example person file:
   //  /users/wvdemeer/pod-generator/out-fragments/http/localhost_3000/www.ldbc.eu/ldbc_socialnet/1.0/data/pers*.nq
@@ -88,18 +89,18 @@ export async function generatePodsWithLdbcFiles(
         persIndex < 2
       );
 
-      if (addAclFiles) {
-        await addAclFile(
-          cssBaseUrl,
-          account,
-          authFetch,
-          "person.nq",
-          true,
-          false,
-          false,
-          persIndex < 2
-        );
-      }
+      await addAuthZFiles(
+        cssBaseUrl,
+        account,
+        authFetch,
+        "person.nq",
+        true,
+        false,
+        false,
+        persIndex < 2,
+        addAclFiles,
+        addAcrFiles
+      );
     }
   }
 }
