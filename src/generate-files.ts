@@ -32,8 +32,16 @@ export async function generateVariableSizeFiles(
   cssBaseUrl: string,
   userCount: number,
   addAclFiles: boolean = false,
-  addAcrFiles: boolean = false
+  addAcrFiles: boolean = false,
+  addAcFilePerResource: boolean = true,
+  addAcFilePerDir: boolean = true,
+  dirDepth: number = 0
 ) {
+  let subDirs = ``;
+  for (let i = 0; i < dirDepth; i++) {
+    subDirs += "data/";
+  }
+
   const files: Array<[string, Buffer]> = [];
   // for (const size in [10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000]) {
   for (const size of [
@@ -65,7 +73,7 @@ export async function generateVariableSizeFiles(
         cssBaseUrl,
         account,
         fileContent,
-        fileName,
+        `${subDirs}${fileName}`,
         authFetch,
         CONTENT_TYPE_BYTE,
         i < 2
@@ -81,7 +89,10 @@ export async function generateVariableSizeFiles(
         false,
         i < 2,
         addAclFiles,
-        addAcrFiles
+        addAcrFiles,
+        addAcFilePerResource,
+        addAcFilePerDir,
+        dirDepth
       );
     }
   }
@@ -94,8 +105,16 @@ export async function generateFixedSizeFiles(
   fileCount: number,
   fileSize: number,
   addAclFiles: boolean = false,
-  addAcrFiles: boolean = false
+  addAcrFiles: boolean = false,
+  addAcFilePerResource: boolean = true,
+  addAcFilePerDir: boolean = true,
+  dirDepth: number = 0
 ) {
+  let subDirs = ``;
+  for (let i = 0; i < dirDepth; i++) {
+    subDirs += "data/";
+  }
+
   const fileContent = Buffer.from(generateContent(fileSize));
 
   for (let i = 0; i < userCount; i++) {
@@ -109,26 +128,27 @@ export async function generateFixedSizeFiles(
         cssBaseUrl,
         account,
         fileContent,
-        fileName,
+        `${subDirs}${fileName}`,
         authFetch,
         CONTENT_TYPE_BYTE,
         i < 2
       );
 
-      if (addAclFiles) {
-        await addAuthZFiles(
-          cssBaseUrl,
-          account,
-          authFetch,
-          fileName,
-          true,
-          true,
-          false,
-          i < 2,
-          addAclFiles,
-          addAcrFiles
-        );
-      }
+      await addAuthZFiles(
+        cssBaseUrl,
+        account,
+        authFetch,
+        fileName,
+        true,
+        true,
+        false,
+        i < 2,
+        addAclFiles,
+        addAcrFiles,
+        addAcFilePerResource,
+        addAcFilePerDir,
+        dirDepth
+      );
     }
     const stopTime1 = new Date().getTime();
 
@@ -150,8 +170,16 @@ export async function generateRdfFiles(
   cssBaseUrl: string,
   userCount: number,
   addAclFiles: boolean = false,
-  addAcrFiles: boolean = false
+  addAcrFiles: boolean = false,
+  addAcFilePerResource: boolean = true,
+  addAcFilePerDir: boolean = true,
+  dirDepth: number = 0
 ) {
+  let subDirs = ``;
+  for (let i = 0; i < dirDepth; i++) {
+    subDirs += "data/";
+  }
+
   const fileInfos: { fileName: string; buffer: Buffer; contentType: string }[] =
     [];
   for (const rt of RDFTypeValues) {
@@ -181,7 +209,7 @@ export async function generateRdfFiles(
         cssBaseUrl,
         account,
         fileInfo.buffer,
-        fileInfo.fileName,
+        `${subDirs}${fileInfo.fileName}`,
         authFetch,
         fileInfo.contentType,
         i < 2
@@ -197,7 +225,10 @@ export async function generateRdfFiles(
         false,
         i < 2,
         addAclFiles,
-        addAcrFiles
+        addAcrFiles,
+        addAcFilePerResource,
+        addAcFilePerDir,
+        dirDepth
       );
     }
   }

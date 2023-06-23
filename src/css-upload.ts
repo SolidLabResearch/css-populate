@@ -202,32 +202,61 @@ export async function addAuthZFiles(
   publicControl: boolean = false,
   debugLogging: boolean = false,
   addAclFiles: boolean = false,
-  addAcrFiles: boolean = false
+  addAcrFiles: boolean = false,
+  addAcFilePerResource: boolean = true,
+  addAcFilePerDir: boolean = true,
+  dirDepth: number = 0
 ) {
-  if (addAclFiles)
-    await addAuthZFile(
-      cssBaseUrl,
-      account,
-      authFetch,
-      targetFilename,
-      publicRead,
-      publicWrite,
-      publicControl,
-      debugLogging,
-      "WAC"
-    );
-  if (addAcrFiles)
-    await addAuthZFile(
-      cssBaseUrl,
-      account,
-      authFetch,
-      targetFilename,
-      publicRead,
-      publicWrite,
-      publicControl,
-      debugLogging,
-      "ACP"
-    );
+  const authZTypes: ("ACP" | "WAC")[] = [];
+  if (addAclFiles) {
+    authZTypes.push("WAC");
+  }
+  if (addAcrFiles) {
+    authZTypes.push("ACP");
+  }
+
+  for (const authZType of authZTypes) {
+    if (addAcFilePerDir) {
+      //We always assume the .acr or .acl file at the pod root is already present.
+      for (let curDepth = 0; curDepth < dirDepth; curDepth++) {
+        let targetDirName = ``;
+        for (let i = 0; i < curDepth; i++) {
+          targetDirName += "data/";
+        }
+        await addAuthZFile(
+          cssBaseUrl,
+          account,
+          authFetch,
+          `${targetDirName}`,
+          publicRead,
+          publicWrite,
+          publicControl,
+          debugLogging,
+          authZType,
+          true
+        );
+      }
+    }
+
+    if (addAcFilePerResource) {
+      let subDirs = ``;
+      for (let i = 0; i < dirDepth; i++) {
+        subDirs += "data/";
+      }
+      await addAuthZFile(
+        cssBaseUrl,
+        account,
+        authFetch,
+        `${subDirs}${targetFilename}`,
+        publicRead,
+        publicWrite,
+        publicControl,
+        debugLogging,
+        authZType,
+        false
+      );
+    }
+  }
 }
 
 export async function addAuthZFile(
@@ -239,15 +268,16 @@ export async function addAuthZFile(
   publicWrite: boolean = false,
   publicControl: boolean = false,
   debugLogging: boolean = false,
-  authZ_type: "ACP" | "WAC" = "ACP"
+  authZType: "ACP" | "WAC" = "ACP",
+  isDir: boolean = false
 ) {
   const serverDomainName = new URL(cssBaseUrl).hostname;
   let newAuthZContent;
   let filename;
   let contentType;
 
-  if (authZ_type == "WAC") {
-    filename = `${targetFilename}.acl`;
+  if (authZType == "WAC") {
+    filename = `${targetFilename}.acl`; // Note: works for both isDir values
     contentType = CONTENT_TYPE_ACL;
     newAuthZContent = makeAclContent(
       serverDomainName,
@@ -256,10 +286,11 @@ export async function addAuthZFile(
       targetFilename,
       publicRead,
       publicWrite,
-      publicControl
+      publicControl,
+      isDir
     );
   } else {
-    filename = `${targetFilename}.acr`;
+    filename = `${targetFilename}.acr`; // Note: works for both isDir values
     contentType = CONTENT_TYPE_ACR;
     newAuthZContent = makeAcrContent(
       serverDomainName,
@@ -268,7 +299,8 @@ export async function addAuthZFile(
       targetFilename,
       publicRead,
       publicWrite,
-      publicControl
+      publicControl,
+      isDir
     );
   }
 

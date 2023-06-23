@@ -92,17 +92,45 @@ const argv = yargs(hideBin(process.argv))
     demandOption: false,
   })
   .option("add-acl-files", {
-    group: "Generate Fixed Size Content:",
+    group: "Generate Content:",
     type: "boolean",
-    description: "Upload a corresponding .acl file for each generated file",
+    description:
+      "Upload a corresponding .acl file for each generated file and/or dir",
     default: false,
     demandOption: false,
   })
   .option("add-acr-files", {
-    group: "Generate Fixed Size Content:",
+    group: "Generate Content:",
     type: "boolean",
-    description: "Upload a corresponding .acr file for each generated file",
+    description:
+      "Upload a corresponding .acr file for each generated file and/or dir",
     default: false,
+    demandOption: false,
+  })
+  .option("add-ac-file-per-resource", {
+    group: "Generate Content:",
+    type: "boolean",
+    description:
+      "Upload a corresponding .acl/.acr file for each generated file.",
+    default: true,
+    demandOption: false,
+  })
+  .option("add-ac-file-per-dir", {
+    group: "Generate Content:",
+    type: "boolean",
+    description:
+      "Upload a corresponding .acl/.acr file for each pod root and subdir.",
+    default: true,
+    demandOption: false,
+  })
+  .option("dir-depth", {
+    group: "Generate Content:",
+    type: "number",
+    description:
+      "Put the generated content in this amount of nested subdirs. Use 0 for no subdirs (= files in pod root). " +
+      "Subdirs will all be named 'data'. " +
+      "Example generated file if this option is 2: https://example.com/user0/data/data/10.rnd",
+    default: 0,
     demandOption: false,
   })
   .option("dir", {
@@ -157,6 +185,9 @@ const fileSize = argv.fileSize || 10;
 const fileCount = argv.fileCount || 1;
 const addAclFiles = argv.addAclFiles || false;
 const addAcrFiles = argv.addAcrFiles || false;
+const dirDepth = argv.dirDepth || 0;
+const addAcFilePerDir = argv.addAcFilePerDir || true;
+const addAcFilePerResource = argv.addAcFilePerResource || true;
 
 async function main() {
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
@@ -173,7 +204,10 @@ async function main() {
       cssBaseUrl,
       usercount,
       addAclFiles,
-      addAcrFiles
+      addAcrFiles,
+      addAcFilePerResource,
+      addAcFilePerDir,
+      dirDepth
     );
   }
 
@@ -185,7 +219,10 @@ async function main() {
       fileCount,
       fileSize,
       addAclFiles,
-      addAcrFiles
+      addAcrFiles,
+      addAcFilePerResource,
+      addAcFilePerDir,
+      dirDepth
     );
   }
 

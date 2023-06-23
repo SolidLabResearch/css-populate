@@ -7,7 +7,8 @@ export function makeAcrContent(
   targetFilename: string,
   publicRead: boolean = true,
   publicWrite: boolean = false,
-  publicControl: boolean = false
+  publicControl: boolean = false,
+  isDir: boolean = false
 ) {
   const webID = `https://${serverDomainName}/${account}/profile/card#me`;
 
@@ -60,13 +61,25 @@ export function makeAcrContent(
         ]
     ].`;
 
+  const root = isDir
+    ? `
+    a acp:AccessControlResource;
+    # Set the access to the subdir storage folder
+    acp:resource <./>;
+    # Everything is readable by the public
+    acp:accessControl <#fullOwnerAccess>, <#publicReadAccess>;
+    # All resources will inherit this authorization
+    acp:memberAccessControl <#fullOwnerAccess>.`
+    : `
+    a acp:AccessControlResource;
+    acp:resource <./${targetFilename}>;
+    acp:accessControl <#ownerAccess>, <#publicAccess>.`;
+
   return `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
 @prefix acp: <http://www.w3.org/ns/solid/acp#>.
 
 <#root>
-    a acp:AccessControlResource;
-    acp:resource <./${targetFilename}>;
-    acp:accessControl <#ownerAccess>, <#publicAccess>.
+    ${root}
 
 ${publicRead ? publicAccess : ""}
 
