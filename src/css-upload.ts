@@ -227,7 +227,8 @@ export async function addAuthZFiles(
           cssBaseUrl,
           account,
           authFetch,
-          `${targetDirName}`,
+          targetDirName,
+          "",
           publicRead,
           publicWrite,
           publicControl,
@@ -247,7 +248,8 @@ export async function addAuthZFiles(
         cssBaseUrl,
         account,
         authFetch,
-        `${subDirs}${targetFilename}`,
+        subDirs,
+        targetFilename,
         publicRead,
         publicWrite,
         publicControl,
@@ -263,7 +265,8 @@ export async function addAuthZFile(
   cssBaseUrl: string,
   account: string,
   authFetch: AnyFetchType,
-  targetFilename: string,
+  targetDirname: string, //dir of the file that needs AuthZ
+  targetBaseFilename: string, //base name (without dir) of the file that needs AuthZ. For dirs, this is empty
   publicRead: boolean = true,
   publicWrite: boolean = false,
   publicControl: boolean = false,
@@ -273,42 +276,48 @@ export async function addAuthZFile(
 ) {
   const serverDomainName = new URL(cssBaseUrl).hostname;
   let newAuthZContent;
-  let filename;
+  let fullPathPodFilename;
   let contentType;
 
+  console.assert(
+    targetDirname.length === 0 ||
+      targetDirname.charAt(targetDirname.length - 1) === "/"
+  );
+  console.assert((targetBaseFilename.length === 0) === isDir);
+
   if (authZType == "WAC") {
-    filename = `${targetFilename}.acl`; // Note: works for both isDir values
-    contentType = CONTENT_TYPE_ACL;
     newAuthZContent = makeAclContent(
       serverDomainName,
       account,
       authFetch,
-      targetFilename,
+      targetBaseFilename,
       publicRead,
       publicWrite,
       publicControl,
       isDir
     );
+    contentType = CONTENT_TYPE_ACL;
+    fullPathPodFilename = `${targetDirname}${targetBaseFilename}.acl`; // Note: works for both isDir values
   } else {
-    filename = `${targetFilename}.acr`; // Note: works for both isDir values
-    contentType = CONTENT_TYPE_ACR;
     newAuthZContent = makeAcrContent(
       serverDomainName,
       account,
       authFetch,
-      targetFilename,
+      targetBaseFilename,
       publicRead,
       publicWrite,
       publicControl,
       isDir
     );
+    contentType = CONTENT_TYPE_ACR;
+    fullPathPodFilename = `${targetDirname}${targetBaseFilename}.acr`; // Note: works for both isDir values
   }
 
   await uploadPodFile(
     cssBaseUrl,
     account,
     newAuthZContent,
-    filename,
+    fullPathPodFilename,
     authFetch,
     contentType,
     debugLogging
