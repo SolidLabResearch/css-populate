@@ -183,11 +183,11 @@ const generatedDataBaseDir =
 const usercount = argv.userCount || 1;
 const fileSize = argv.fileSize || 10;
 const fileCount = argv.fileCount || 1;
-const addAclFiles = argv.addAclFiles || false;
-const addAcrFiles = argv.addAcrFiles || false;
+const addAclFiles = argv.addAclFiles;
+const addAcrFiles = argv.addAcrFiles;
 const dirDepth = argv.dirDepth || 0;
-const addAcFilePerDir = argv.addAcFilePerDir || true;
-const addAcFilePerResource = argv.addAcFilePerResource || true;
+const addAcFilePerDir = argv.addAcFilePerDir;
+const addAcFilePerResource = argv.addAcFilePerResource;
 
 async function main() {
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
