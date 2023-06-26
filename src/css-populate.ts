@@ -111,7 +111,7 @@ const argv = yargs(hideBin(process.argv))
     group: "Generate Content:",
     type: "boolean",
     description:
-      "Upload a corresponding .acl/.acr file for each generated file.",
+      "Upload a corresponding .acl/.acr file for each generated file. Use --no-add-ac-file-per-resource to set to false.",
     default: true,
     demandOption: false,
   })
@@ -119,7 +119,7 @@ const argv = yargs(hideBin(process.argv))
     group: "Generate Content:",
     type: "boolean",
     description:
-      "Upload a corresponding .acl/.acr file for each pod root and subdir.",
+      "Upload a corresponding .acl/.acr file for each pod root and subdir. Use --no-add-ac-file-per-dir to set to false.",
     default: true,
     demandOption: false,
   })
