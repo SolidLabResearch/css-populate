@@ -218,7 +218,7 @@ export async function addAuthZFiles(
   for (const authZType of authZTypes) {
     if (addAcFilePerDir) {
       //We always assume the .acr or .acl file at the pod root is already present.
-      for (let curDepth = 0; curDepth < dirDepth; curDepth++) {
+      for (let curDepth = 1; curDepth < dirDepth + 1; curDepth++) {
         let targetDirName = ``;
         for (let i = 0; i < curDepth; i++) {
           targetDirName += "data/";
