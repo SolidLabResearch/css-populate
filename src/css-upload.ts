@@ -5,6 +5,7 @@ import { AnyFetchType } from "./generic-fetch.js";
 import { CONTENT_TYPE_ACL, CONTENT_TYPE_ACR } from "./content-type.js";
 import { makeAclContent } from "./wac-acl.js";
 import { makeAcrContent } from "./acp-acr.js";
+import { CliArgs } from "./css-populate-args.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -17,14 +18,125 @@ function accountEmail(account: string): string {
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
  */
 export async function createPod(
+  cli: CliArgs,
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
-  nameValue: string,
-  debugLogging: boolean = false
+  nameValue: string
 ): Promise<Object> {
-  if (debugLogging) {
-    console.log(`Will create pod "${nameValue}"...`);
+  const idpInfoUrl = `${cssBaseUrl}.account/`;
+  let accountCreateEndpoint = `${cssBaseUrl}.account/account/`;
+  const idpInfo = await fetch(idpInfoUrl);
+
+  cli.v3(`IdPInfo.ok`, idpInfo.ok);
+  cli.v3(`IdPInfo.status`, idpInfo.status);
+
+  let try1 = true;
+  let try6 = true;
+  let try7 = true;
+
+  if (idpInfo.status == 404) {
+    cli.v1(`   404 fetching IdP Info at ${idpInfoUrl}`);
+    try7 = false;
   }
+  if (idpInfo.ok) {
+    /* We get something like this (CSS v7.0):
+      {
+     "controls" : {
+        "account" : {
+           "create" : "https://n064-28.wall2.ilabt.iminds.be/.account/account/"
+        },
+        "html" : {
+           "main" : {
+              "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
+           },
+           "password" : {
+              "forgot" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/forgot/",
+              "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/",
+              "register" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/register/"
+           }
+        },
+        "main" : {
+           "index" : "https://n064-28.wall2.ilabt.iminds.be/.account/",
+           "logins" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
+        },
+        "password" : {
+           "forgot" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/forgot/",
+           "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/",
+           "reset" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/reset/"
+        }
+     },
+     "version" : "0.5"
+  }
+  */
+    const body: any = await idpInfo.json();
+    cli.v3(`IdP Info: ${JSON.stringify(body, null, 3)}`);
+    if (body?.controls?.account?.create) {
+      accountCreateEndpoint = body?.controls?.account?.create;
+      cli.v2(`IdP Info confirms v7`);
+      try1 = false;
+      try6 = false;
+      try7 = true;
+    } else {
+      cli.v2(`IdP Info unclear`);
+    }
+  }
+
+  let wrongIdPPath = false;
+  let res: Object | null = null;
+
+  cli.v2(`   IdP variants to try: 1=${try1} 6=${try6} 7=${try7}`);
+
+  if (try1) {
+    [wrongIdPPath, res] = await createPodIdp1(
+      cli,
+      authFetchCache,
+      cssBaseUrl,
+      nameValue
+    );
+  }
+
+  if (try6 && wrongIdPPath) {
+    //assume that idp URL has moved (= new version of CSS specific idp)
+    [wrongIdPPath, res] = await createPodIdp6(
+      cli,
+      authFetchCache,
+      cssBaseUrl,
+      nameValue
+    );
+  }
+
+  if (try7 && wrongIdPPath) {
+    //assume that idp URL has moved (= new version of CSS specific idp)
+    [wrongIdPPath, res] = await createPodIdp7(
+      cli,
+      authFetchCache,
+      cssBaseUrl,
+      nameValue,
+      accountCreateEndpoint
+    );
+  }
+
+  if (!res) {
+    console.error(`createPod: IdP problem: 404 for all IdP variants`);
+    throw new Error(`createPod: IdP problem: 404 for all IdP variants`);
+  }
+
+  return res;
+}
+
+/**
+ *
+ * @param {string} authFetchCache The AuthFetchCache
+ * @param {string} cssBaseUrl The base URL of the CSS server
+ * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
+ */
+export async function createPodIdp1(
+  cli: CliArgs,
+  authFetchCache: AuthFetchCache,
+  cssBaseUrl: string,
+  nameValue: string
+): Promise<[boolean, Object]> {
+  cli.v1(`Will create pod "${nameValue}"...`);
   const settings = {
     podName: nameValue,
     email: accountEmail(nameValue),
@@ -37,9 +149,7 @@ export async function createPod(
 
   let idpPath = `idp`;
 
-  if (debugLogging) {
-    console.log(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
-  }
+  cli.v2(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
 
   // @ts-ignore
   let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
@@ -48,37 +158,23 @@ export async function createPod(
     body: JSON.stringify(settings),
   });
 
+  cli.v3(`res.ok`, res.ok);
+  cli.v3(`res.status`, res.status);
+
   if (res.status == 404) {
-    console.log(
-      `   404 registering user, will try again with alternative path`
-    );
+    cli.v1(`   404 registering user: incompatible IdP path`);
 
-    //assume that idp URL has moved (= new version of CSS specific idp)
-    idpPath = `.account`;
-
-    if (debugLogging) {
-      console.log(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
-    }
-
-    // @ts-ignore
-    res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(settings),
-    });
+    return [true, {}];
   }
 
-  // console.log(`res.ok`, res.ok);
-  // console.log(`res.status`, res.status);
+  cli.v3(`res.ok`, res.ok);
+  cli.v3(`res.status`, res.status);
 
   const body = await res.text();
   if (!res.ok) {
     if (body.includes("Account already exists")) {
       //ignore
-      return {};
+      return [false, {}];
     }
     console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
     console.error(body);
@@ -86,7 +182,197 @@ export async function createPod(
   }
 
   const jsonResponse = JSON.parse(body);
-  return jsonResponse;
+  return [false, jsonResponse];
+}
+
+/**
+ *
+ * @param {string} authFetchCache The AuthFetchCache
+ * @param {string} cssBaseUrl The base URL of the CSS server
+ * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
+ */
+export async function createPodIdp6(
+  cli: CliArgs,
+  authFetchCache: AuthFetchCache,
+  cssBaseUrl: string,
+  nameValue: string
+): Promise<[boolean, Object]> {
+  cli.v1(`Will create pod "${nameValue}"...`);
+  const settings = {
+    podName: nameValue,
+    email: accountEmail(nameValue),
+    password: "password",
+    confirmPassword: "password",
+    register: true,
+    createPod: true,
+    createWebId: true,
+  };
+
+  let idpPath = `.account`;
+
+  cli.v2(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
+
+  // @ts-ignore
+  let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
+    method: "POST",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(settings),
+  });
+
+  cli.v3(`res.ok`, res.ok);
+  cli.v3(`res.status`, res.status);
+
+  if (res.status == 404) {
+    cli.v1(`   404 registering user: incompatible IdP path`);
+
+    return [true, {}];
+  }
+
+  cli.v3(`res.ok`, res.ok);
+  cli.v3(`res.status`, res.status);
+
+  const body = await res.text();
+  if (!res.ok) {
+    if (body.includes("Account already exists")) {
+      //ignore
+      return [false, {}];
+    }
+    console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
+    console.error(body);
+    throw new ResponseError(res, body);
+  }
+
+  const jsonResponse = JSON.parse(body);
+  return [false, jsonResponse];
+}
+
+/**
+ *
+ * @param {string} cli CliArgs
+ * @param {string} authFetchCache The AuthFetchCache
+ * @param {string} cssBaseUrl The base URL of the CSS server
+ * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
+ * @param {string} accountCreateEndpoint account creation endpoint
+ */
+export async function createPodIdp7(
+  cli: CliArgs,
+  authFetchCache: AuthFetchCache,
+  cssBaseUrl: string,
+  nameValue: string,
+  accountCreateEndpoint: string
+): Promise<[boolean, Object]> {
+  cli.v1(`Will create pod "${nameValue}"...`);
+
+  //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/b02c8dcac1ca20eb61af62a648e0fc68cecc7dd2/documentation/markdown/usage/account/json-api.md
+
+  cli.v2(`   POSTing to: ${accountCreateEndpoint}`);
+  let res = await fetch(accountCreateEndpoint, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    body: null,
+  });
+
+  if (res.status == 404) {
+    cli.v1(`   404 registering user: incompatible IdP path`);
+    return [true, {}];
+  }
+  if (!res.ok) {
+    console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
+    const body = await res.text();
+    console.error(body);
+    throw new ResponseError(res, body);
+  }
+
+  //reply will create:
+  //   - cookie(s) (auth)
+  //   - resource field with account url
+
+  const createAccountBody: any = await res.json();
+  const accountUrl: string | undefined = createAccountBody?.resource;
+  const cookies = [];
+  for (const [k, v] of res.headers.entries()) {
+    if (k.toLowerCase() === "set-cookie") {
+      cookies.push(v);
+    }
+  }
+  const cookieHeader = cookies
+    .map((c) =>
+      c.substring(0, c.indexOf(";") == -1 ? undefined : c.indexOf(";"))
+    )
+    .reduce((a, b) => a + "; " + b);
+
+  if (!accountUrl || !accountUrl.startsWith("http")) {
+    console.error(
+      `Creating pod for ${nameValue} failed: no resource in response: ${JSON.stringify(
+        createAccountBody
+      )}`
+    );
+    throw new ResponseError(res, createAccountBody);
+  }
+  if (!cookies) {
+    console.error(
+      `Creating pod for ${nameValue} failed: no cookies in response. headers: ${JSON.stringify(
+        res.headers
+      )}`
+    );
+    throw new ResponseError(res, createAccountBody);
+  }
+
+  //We have an account now!
+
+  //TODO get idpInfo again.
+  //     use controls.password.create with email and password field to create pass
+  //     somehow create webid
+
+  //
+  // const settings = {
+  //   podName: nameValue,
+  //   email: accountEmail(nameValue),
+  //   password: "password",
+  //   confirmPassword: "password",
+  //   register: true,
+  //   createPod: true,
+  //   createWebId: true,
+  // };
+  //
+  // let idpPath = `.account`;
+
+  // // @ts-ignore
+  // res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
+  //   method: "POST",
+  //   headers: {
+  //     "content-type": "application/json",
+  //     Accept: "application/json",
+  //     Cookie: cookieHeader,
+  //   },
+  //   body: JSON.stringify(settings),
+  // });
+  //
+  // cli.v3(`res.ok`, res.ok);
+  // cli.v3(`res.status`, res.status);
+  //
+  // if (res.status == 404) {
+  //   cli.v1(`   404 registering user, will try again with alternative path`);
+  //
+  //   return [true, {}];
+  // }
+  //
+  // cli.v3(`res.ok`, res.ok);
+  // cli.v3(`res.status`, res.status);
+  //
+  // const body = await res.text();
+  // if (!res.ok) {
+  //   if (body.includes("Account already exists")) {
+  //     //ignore
+  //     return [false, {}];
+  //   }
+  //   console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
+  //   console.error(body);
+  //   throw new ResponseError(res, body);
+  // }
+  //
+  // const jsonResponse = JSON.parse(body);
+  // return [false, jsonResponse];
 }
 
 export async function uploadPodFile(
