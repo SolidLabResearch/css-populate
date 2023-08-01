@@ -25,7 +25,10 @@ export async function createPod(
 ): Promise<Object> {
   const idpInfoUrl = `${cssBaseUrl}.account/`;
   let accountCreateEndpoint = `${cssBaseUrl}.account/account/`;
-  const idpInfo = await fetch(idpInfoUrl);
+  const idpInfo = await fetch(idpInfoUrl, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
 
   cli.v3(`IdPInfo.ok`, idpInfo.ok);
   cli.v3(`IdPInfo.status`, idpInfo.status);
@@ -45,16 +48,7 @@ export async function createPod(
         "account" : {
            "create" : "https://n064-28.wall2.ilabt.iminds.be/.account/account/"
         },
-        "html" : {
-           "main" : {
-              "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
-           },
-           "password" : {
-              "forgot" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/forgot/",
-              "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/",
-              "register" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/register/"
-           }
-        },
+        "html" : ...,
         "main" : {
            "index" : "https://n064-28.wall2.ilabt.iminds.be/.account/",
            "logins" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
@@ -124,12 +118,6 @@ export async function createPod(
   return res;
 }
 
-/**
- *
- * @param {string} authFetchCache The AuthFetchCache
- * @param {string} cssBaseUrl The base URL of the CSS server
- * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
- */
 export async function createPodIdp1(
   cli: CliArgs,
   authFetchCache: AuthFetchCache,
@@ -185,12 +173,6 @@ export async function createPodIdp1(
   return [false, jsonResponse];
 }
 
-/**
- *
- * @param {string} authFetchCache The AuthFetchCache
- * @param {string} cssBaseUrl The base URL of the CSS server
- * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
- */
 export async function createPodIdp6(
   cli: CliArgs,
   authFetchCache: AuthFetchCache,
@@ -324,6 +306,51 @@ export async function createPodIdp7(
   //     use controls.password.create with email and password field to create pass
   //     somehow create webid
 
+  const idpInfoUrl = `${cssBaseUrl}.account/`;
+  const idpInfo = await fetch(idpInfoUrl, {
+    method: "GET",
+    headers: { Cookie: cookieHeader, Accept: "application/json" },
+  });
+
+  cli.v3(`IdPInfo.ok`, idpInfo.ok);
+  cli.v3(`IdPInfo.status`, idpInfo.status);
+
+  if (idpInfo.status == 404) {
+    cli.v1(`   404 fetching IdP Info at ${idpInfoUrl}`);
+    return [true, {}];
+  }
+  if (idpInfo.ok) {
+    /* We are logged in, so we get something like this:  TODO update example with logged in info
+      {
+     "controls" : {
+        "account" : {
+           "create" : "https://n064-28.wall2.ilabt.iminds.be/.account/account/"
+        },
+        "html" : ...
+        "main" : {
+           "index" : "https://n064-28.wall2.ilabt.iminds.be/.account/",
+           "logins" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
+        },
+        "password" : {
+           "forgot" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/forgot/",
+           "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/",
+           "reset" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/reset/"
+        }
+     },
+     "version" : "0.5"
+  }
+  */
+    const body: any = await idpInfo.json();
+    cli.v3(`IdP Info: ${JSON.stringify(body, null, 3)}`);
+    if (body?.controls?.password?.create) {
+      passwordCreateEndpoint = body?.controls?.account?.create;
+      cli.v2(`IdP Info confirms v7`);
+    } else {
+      cli.v1(`IdP Info is missing expected fields`);
+      return [true, {}];
+    }
+  }
+
   //
   // const settings = {
   //   podName: nameValue,
@@ -372,7 +399,7 @@ export async function createPodIdp7(
   // }
   //
   // const jsonResponse = JSON.parse(body);
-  // return [false, jsonResponse];
+  return [false, jsonResponse];
 }
 
 export async function uploadPodFile(
