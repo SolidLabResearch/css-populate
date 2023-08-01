@@ -3,7 +3,7 @@ import { AnyFetchType } from "./generic-fetch";
 import fetch from "node-fetch";
 import { createUserTokenv6, createUserTokenv7, UserToken } from "./solid-auth";
 
-interface AccountApiInfo {
+export interface AccountApiInfo {
   controls: {
     password?: {
       create?: string;
@@ -30,7 +30,6 @@ interface AccountApiInfo {
 
 export async function getAccountApiInfo(
   cli: CliArgs,
-  fetcher: AnyFetchType = fetch,
   cookieHeader?: string
 ): Promise<AccountApiInfo | null> {
   const accountApiUrl = `${cli.cssBaseUrl}.account/`;
@@ -38,7 +37,7 @@ export async function getAccountApiInfo(
   if (cookieHeader) {
     headers["Cookie"] = cookieHeader;
   }
-  const accountApiResp = await fetcher(accountApiUrl, {
+  const accountApiResp = await fetch(accountApiUrl, {
     method: "GET",
     headers,
   });

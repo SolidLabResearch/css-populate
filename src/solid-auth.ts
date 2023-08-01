@@ -8,6 +8,7 @@ import { KeyPair } from "@inrupt/solid-client-authn-core/src/authenticatedFetch/
 import { AnyFetchType } from "./generic-fetch.js";
 import { CliArgs } from "./css-populate-args";
 import fetch from "node-fetch";
+import { AccountApiInfo, getAccountApiInfo } from "./css-accounts-api.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -120,8 +121,9 @@ export async function createUserTokenv7(
   account: string,
   password: string,
   fetcher: AnyFetchType = fetch,
-  controls: any
+  accountApiInfo: AccountApiInfo
 ): Promise<UserToken> {
+  let controls = accountApiInfo.controls;
   const clientCredentialsEndpoint = controls?.account?.clientCredentials;
 
   ////// Login (= get cookie) /////
@@ -156,6 +158,8 @@ export async function createUserTokenv7(
   cli.v3("Got cookie", cookieHeader);
 
   ////// Get WebID from account info /////
+  controls = (await getAccountApiInfo(cli, cookieHeader))?.controls;
+
   cli.v2("Looking for WebID...");
   let accountInfoEndpoint = controls?.account?.account;
   console.assert(
