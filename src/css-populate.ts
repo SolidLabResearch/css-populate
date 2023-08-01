@@ -19,12 +19,7 @@ async function main() {
   const cli = getCliArgs();
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
 
-  const authFetchCache = new AuthFetchCache(
-    cli.cssBaseUrl,
-    true,
-    "all",
-    fetcher
-  );
+  const authFetchCache = new AuthFetchCache(cli, true, "all", fetcher);
 
   if (cli.generateUsers) {
     await generatePodsAndUsers(

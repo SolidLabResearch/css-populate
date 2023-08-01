@@ -6,8 +6,10 @@ import {
   UserToken,
 } from "./solid-auth.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
+import { CliArgs } from "./css-populate-args.js";
 
 export class AuthFetchCache {
+  cli: CliArgs;
   cssBaseUrl: string;
   authenticateCache: "none" | "token" | "all" = "none";
   authenticate: boolean = false;
@@ -23,12 +25,13 @@ export class AuthFetchCache {
   fetcher: AnyFetchType;
 
   constructor(
-    cssBaseUrl: string,
+    cli: CliArgs,
     authenticate: boolean,
     authenticateCache: "none" | "token" | "all",
     fetcher: AnyFetchType = es6fetch
   ) {
-    this.cssBaseUrl = cssBaseUrl;
+    this.cli = cli;
+    this.cssBaseUrl = cli.cssBaseUrl;
     this.authenticate = authenticate;
     this.authenticateCache = authenticateCache;
     this.fetcher = fetcher;
@@ -69,6 +72,7 @@ export class AuthFetchCache {
 
     if (!userToken) {
       userToken = await createUserToken(
+        this.cli,
         this.cssBaseUrl,
         account,
         "password",

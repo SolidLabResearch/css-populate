@@ -6,6 +6,7 @@ import { CONTENT_TYPE_ACL, CONTENT_TYPE_ACR } from "./content-type.js";
 import { makeAclContent } from "./wac-acl.js";
 import { makeAcrContent } from "./acp-acr.js";
 import { CliArgs } from "./css-populate-args.js";
+import { getAccountApiInfo } from "./css-accounts-api.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -23,60 +24,26 @@ export async function createPod(
   cssBaseUrl: string,
   nameValue: string
 ): Promise<Object> {
-  const accountApiUrl = `${cssBaseUrl}.account/`;
   let accountCreateEndpoint = `${cssBaseUrl}.account/account/`;
-  const accountApiResp = await fetch(accountApiUrl, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
-
-  cli.v3(
-    `accountApiResp.ok`,
-    accountApiResp.ok,
-    `accountApiResp.status`,
-    accountApiResp.status
-  );
 
   let try1 = true;
   let try6 = true;
   let try7 = true;
 
-  if (accountApiResp.status == 404) {
-    cli.v1(`404 fetching Account API at ${accountApiUrl}`);
+  const accountApiInfo = await getAccountApiInfo(cli);
+  if (!accountApiInfo) {
     try7 = false;
   }
-  if (accountApiResp.ok) {
-    /* We get something like this (CSS v7.0):
-      {
-     "controls" : {
-        "account" : {
-           "create" : "https://n064-28.wall2.ilabt.iminds.be/.account/account/"
-        },
-        "html" : ...,
-        "main" : {
-           "index" : "https://n064-28.wall2.ilabt.iminds.be/.account/",
-           "logins" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
-        },
-        "password" : {
-           "forgot" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/forgot/",
-           "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/",
-           "reset" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/reset/"
-        }
-     },
-     "version" : "0.5"
-  }
-  */
-    const body: any = await accountApiResp.json();
-    cli.v3(`Account API: ${JSON.stringify(body, null, 3)}`);
-    if (body?.controls?.account?.create) {
-      accountCreateEndpoint = body?.controls?.account?.create;
-      cli.v2(`Account API confirms v7`);
-      try1 = false;
-      try6 = false;
-      try7 = true;
-    } else {
-      cli.v2(`Account API unclear`);
-    }
+
+  if (accountApiInfo?.controls?.account?.create) {
+    accountCreateEndpoint = accountApiInfo?.controls?.account?.create;
+    cli.v2(`Account API confirms v7`);
+    try1 = false;
+    try6 = false;
+    try7 = true;
+  } else {
+    cli.v2(`Account API unclear`);
+    try7 = false;
   }
 
   let mustCreatePod = true;
@@ -439,12 +406,12 @@ export async function createPodIdp7(
     headers: { Cookie: cookieHeader, Accept: "application/json" },
   });
   if (!accountInfoResp.ok) {
-    console.error(`${resp.status} - Failed to get account info:`);
-    const body = await resp.text();
+    console.error(`${accountInfoResp.status} - Failed to get account info:`);
+    const body = await accountInfoResp.text();
     console.error(body);
-    throw new ResponseError(resp, body);
+    throw new ResponseError(accountInfoResp, body);
   }
-  const accountInfoObj: any = await resp.json();
+  const accountInfoObj: any = await accountInfoResp.json();
   return [false, accountInfoObj];
 }
 
