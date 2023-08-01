@@ -75,13 +75,13 @@ export async function createPod(
     }
   }
 
-  let wrongIdPPath = false;
+  let mustCreatePod = true;
   let res: Object | null = null;
 
   cli.v2(`   IdP variants to try: 1=${try1} 6=${try6} 7=${try7}`);
 
-  if (try1) {
-    [wrongIdPPath, res] = await createPodIdp1(
+  if (try1 && mustCreatePod) {
+    [mustCreatePod, res] = await createPodIdp1(
       cli,
       authFetchCache,
       cssBaseUrl,
@@ -89,9 +89,9 @@ export async function createPod(
     );
   }
 
-  if (try6 && wrongIdPPath) {
+  if (try6 && mustCreatePod) {
     //assume that idp URL has moved (= new version of CSS specific idp)
-    [wrongIdPPath, res] = await createPodIdp6(
+    [mustCreatePod, res] = await createPodIdp6(
       cli,
       authFetchCache,
       cssBaseUrl,
@@ -99,9 +99,9 @@ export async function createPod(
     );
   }
 
-  if (try7 && wrongIdPPath) {
+  if (try7 && mustCreatePod) {
     //assume that idp URL has moved (= new version of CSS specific idp)
-    [wrongIdPPath, res] = await createPodIdp7(
+    [mustCreatePod, res] = await createPodIdp7(
       cli,
       authFetchCache,
       cssBaseUrl,
@@ -110,7 +110,7 @@ export async function createPod(
     );
   }
 
-  if (!res) {
+  if (mustCreatePod || !res) {
     console.error(`createPod: IdP problem: 404 for all IdP variants`);
     throw new Error(`createPod: IdP problem: 404 for all IdP variants`);
   }
@@ -319,39 +319,107 @@ export async function createPodIdp7(
     cli.v1(`   404 fetching IdP Info at ${idpInfoUrl}`);
     return [true, {}];
   }
-  if (idpInfo.ok) {
-    /* We are logged in, so we get something like this:  TODO update example with logged in info
-      {
-     "controls" : {
-        "account" : {
-           "create" : "https://n064-28.wall2.ilabt.iminds.be/.account/account/"
-        },
-        "html" : ...
-        "main" : {
-           "index" : "https://n064-28.wall2.ilabt.iminds.be/.account/",
-           "logins" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/"
-        },
-        "password" : {
-           "forgot" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/forgot/",
-           "login" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/",
-           "reset" : "https://n064-28.wall2.ilabt.iminds.be/.account/login/password/reset/"
-        }
-     },
-     "version" : "0.5"
-  }
-  */
-    const body: any = await idpInfo.json();
-    cli.v3(`IdP Info: ${JSON.stringify(body, null, 3)}`);
-    if (body?.controls?.password?.create) {
-      passwordCreateEndpoint = body?.controls?.account?.create;
-      cli.v2(`IdP Info confirms v7`);
-    } else {
-      cli.v1(`IdP Info is missing expected fields`);
-      return [true, {}];
-    }
+  if (!idpInfo.ok) {
+    cli.v1(`IdP Info empty after account create`);
+    return [true, {}];
   }
 
-  //
+  /* We are logged in, so we get something like this:  TODO update example with logged in info
+     {
+ "controls": {
+    "password": {
+       "create": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/login/password/",
+       "forgot": "http://localhost:3000/.account/login/password/forgot/",
+       "login": "http://localhost:3000/.account/login/password/",
+       "reset": "http://localhost:3000/.account/login/password/reset/"
+    },
+    "account": {
+       "create": "http://localhost:3000/.account/account/",
+       "clientCredentials": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/client-credentials/",
+       "pod": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/pod/",
+       "webId": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/webid/",
+       "logout": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/logout/",
+       "account": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/"
+    },
+    "main": {
+       "index": "http://localhost:3000/.account/",
+       "logins": "http://localhost:3000/.account/login/"
+    },
+    "html": ...
+ },
+ "version": "0.5"
+}
+*/
+
+  const body: any = await idpInfo.json();
+  cli.v3(`IdP Info: ${JSON.stringify(body, null, 3)}`);
+  if (!body?.controls?.password?.create) {
+    cli.v1(`IdP Info is missing expected fields`);
+    return [true, {}];
+  }
+
+  /// Create a password for the account ////
+
+  const passCreateEndpoint = body?.controls?.password?.create;
+  cli.v2(`IdP Info gave passCreateEndpoint: ${passCreateEndpoint}`);
+
+  const createPassObj = {
+    email: accountEmail(nameValue),
+    password: "password",
+  };
+
+  cli.v2(`   POSTing to: ${passCreateEndpoint}`);
+  res = await fetch(passCreateEndpoint, {
+    method: "POST",
+    headers: {
+      Cookie: cookieHeader,
+      "content-type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(createPassObj),
+  });
+  cli.v3(`res.ok`, idpInfo.ok);
+  cli.v3(`res.status`, idpInfo.status);
+
+  if (!res.ok) {
+    console.error(`${res.status} - Creating password for ${nameValue} failed:`);
+    const body = await res.text();
+    console.error(body);
+    throw new ResponseError(res, body);
+  }
+
+  /// Create a pod and link the WebID in it ////
+
+  const podCreateEndpoint = body?.controls?.account?.pod;
+  cli.v2(`IdP Info gave podCreateEndpoint: ${podCreateEndpoint}`);
+
+  const podCreateObj = {
+    name: nameValue,
+    // settings: {  webId: 'custom'},
+  };
+
+  cli.v2(`   POSTing to: ${podCreateEndpoint}`);
+  res = await fetch(podCreateEndpoint, {
+    method: "POST",
+    headers: {
+      Cookie: cookieHeader,
+      "content-type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(podCreateObj),
+  });
+  cli.v3(`res.ok`, idpInfo.ok);
+  cli.v3(`res.status`, idpInfo.status);
+
+  if (!res.ok) {
+    console.error(
+      `${res.status} - Creating Pod & WebID for ${nameValue} failed:`
+    );
+    const body = await res.text();
+    console.error(body);
+    throw new ResponseError(res, body);
+  }
+
   // const settings = {
   //   podName: nameValue,
   //   email: accountEmail(nameValue),
@@ -399,7 +467,9 @@ export async function createPodIdp7(
   // }
   //
   // const jsonResponse = JSON.parse(body);
-  return [false, jsonResponse];
+  // return [false, jsonResponse];
+  throw new Error("Implementation incomplete");
+  return [false, {}];
 }
 
 export async function uploadPodFile(
