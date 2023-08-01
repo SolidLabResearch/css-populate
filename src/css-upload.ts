@@ -23,25 +23,29 @@ export async function createPod(
   cssBaseUrl: string,
   nameValue: string
 ): Promise<Object> {
-  const idpInfoUrl = `${cssBaseUrl}.account/`;
+  const accountApiUrl = `${cssBaseUrl}.account/`;
   let accountCreateEndpoint = `${cssBaseUrl}.account/account/`;
-  const idpInfo = await fetch(idpInfoUrl, {
+  const accountApiResp = await fetch(accountApiUrl, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
 
-  cli.v3(`IdPInfo.ok`, idpInfo.ok);
-  cli.v3(`IdPInfo.status`, idpInfo.status);
+  cli.v3(
+    `accountApiResp.ok`,
+    accountApiResp.ok,
+    `accountApiResp.status`,
+    accountApiResp.status
+  );
 
   let try1 = true;
   let try6 = true;
   let try7 = true;
 
-  if (idpInfo.status == 404) {
-    cli.v1(`   404 fetching IdP Info at ${idpInfoUrl}`);
+  if (accountApiResp.status == 404) {
+    cli.v1(`404 fetching Account API at ${accountApiUrl}`);
     try7 = false;
   }
-  if (idpInfo.ok) {
+  if (accountApiResp.ok) {
     /* We get something like this (CSS v7.0):
       {
      "controls" : {
@@ -62,23 +66,23 @@ export async function createPod(
      "version" : "0.5"
   }
   */
-    const body: any = await idpInfo.json();
-    cli.v3(`IdP Info: ${JSON.stringify(body, null, 3)}`);
+    const body: any = await accountApiResp.json();
+    cli.v3(`Account API: ${JSON.stringify(body, null, 3)}`);
     if (body?.controls?.account?.create) {
       accountCreateEndpoint = body?.controls?.account?.create;
-      cli.v2(`IdP Info confirms v7`);
+      cli.v2(`Account API confirms v7`);
       try1 = false;
       try6 = false;
       try7 = true;
     } else {
-      cli.v2(`IdP Info unclear`);
+      cli.v2(`Account API unclear`);
     }
   }
 
   let mustCreatePod = true;
   let res: Object | null = null;
 
-  cli.v2(`   IdP variants to try: 1=${try1} 6=${try6} 7=${try7}`);
+  cli.v2(`IdP variants to try: 1=${try1} 6=${try6} 7=${try7}`);
 
   if (try1 && mustCreatePod) {
     [mustCreatePod, res] = await createPodIdp1(
@@ -137,7 +141,7 @@ export async function createPodIdp1(
 
   let idpPath = `idp`;
 
-  cli.v2(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
+  cli.v2(`POSTing to: ${cssBaseUrl}${idpPath}/register/`);
 
   // @ts-ignore
   let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
@@ -146,17 +150,13 @@ export async function createPodIdp1(
     body: JSON.stringify(settings),
   });
 
-  cli.v3(`res.ok`, res.ok);
-  cli.v3(`res.status`, res.status);
+  cli.v3(`res.ok`, res.ok, `res.status`, res.status);
 
   if (res.status == 404) {
-    cli.v1(`   404 registering user: incompatible IdP path`);
+    cli.v1(`404 registering user: incompatible IdP path`);
 
     return [true, {}];
   }
-
-  cli.v3(`res.ok`, res.ok);
-  cli.v3(`res.status`, res.status);
 
   const body = await res.text();
   if (!res.ok) {
@@ -192,7 +192,7 @@ export async function createPodIdp6(
 
   let idpPath = `.account`;
 
-  cli.v2(`   POSTing to: ${cssBaseUrl}${idpPath}/register/`);
+  cli.v2(`POSTing to: ${cssBaseUrl}${idpPath}/register/`);
 
   // @ts-ignore
   let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
@@ -201,17 +201,13 @@ export async function createPodIdp6(
     body: JSON.stringify(settings),
   });
 
-  cli.v3(`res.ok`, res.ok);
-  cli.v3(`res.status`, res.status);
+  cli.v3(`res.ok`, res.ok, `res.status`, res.status);
 
   if (res.status == 404) {
-    cli.v1(`   404 registering user: incompatible IdP path`);
+    cli.v1(`404 registering user: incompatible IdP path`);
 
     return [true, {}];
   }
-
-  cli.v3(`res.ok`, res.ok);
-  cli.v3(`res.status`, res.status);
 
   const body = await res.text();
   if (!res.ok) {
@@ -247,32 +243,33 @@ export async function createPodIdp7(
 
   //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/b02c8dcac1ca20eb61af62a648e0fc68cecc7dd2/documentation/markdown/usage/account/json-api.md
 
-  cli.v2(`   POSTing to: ${accountCreateEndpoint}`);
-  let res = await fetch(accountCreateEndpoint, {
+  cli.v2(`Creating Account...`);
+  cli.v2(`POSTing to: ${accountCreateEndpoint}`);
+  let resp = await fetch(accountCreateEndpoint, {
     method: "POST",
     headers: { Accept: "application/json" },
     body: null,
   });
 
-  if (res.status == 404) {
-    cli.v1(`   404 registering user: incompatible IdP path`);
+  if (resp.status == 404) {
+    cli.v1(`404 registering user: incompatible IdP path`);
     return [true, {}];
   }
-  if (!res.ok) {
-    console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
-    const body = await res.text();
+  if (!resp.ok) {
+    console.error(`${resp.status} - Creating pod for ${nameValue} failed:`);
+    const body = await resp.text();
     console.error(body);
-    throw new ResponseError(res, body);
+    throw new ResponseError(resp, body);
   }
 
   //reply will create:
   //   - cookie(s) (auth)
   //   - resource field with account url
 
-  const createAccountBody: any = await res.json();
+  const createAccountBody: any = await resp.json();
   const accountUrl: string | undefined = createAccountBody?.resource;
   const cookies = [];
-  for (const [k, v] of res.headers.entries()) {
+  for (const [k, v] of resp.headers.entries()) {
     if (k.toLowerCase() === "set-cookie") {
       cookies.push(v);
     }
@@ -289,42 +286,43 @@ export async function createPodIdp7(
         createAccountBody
       )}`
     );
-    throw new ResponseError(res, createAccountBody);
+    throw new ResponseError(resp, createAccountBody);
   }
   if (!cookies) {
     console.error(
       `Creating pod for ${nameValue} failed: no cookies in response. headers: ${JSON.stringify(
-        res.headers
+        resp.headers
       )}`
     );
-    throw new ResponseError(res, createAccountBody);
+    throw new ResponseError(resp, createAccountBody);
   }
 
   //We have an account now!
 
-  //TODO get idpInfo again.
-  //     use controls.password.create with email and password field to create pass
-  //     somehow create webid
-
-  const idpInfoUrl = `${cssBaseUrl}.account/`;
-  const idpInfo = await fetch(idpInfoUrl, {
+  cli.v2(`Fetching account endpoints...`);
+  const accountApiUrl = `${cssBaseUrl}.account/`;
+  const accountApiResp = await fetch(accountApiUrl, {
     method: "GET",
     headers: { Cookie: cookieHeader, Accept: "application/json" },
   });
 
-  cli.v3(`IdPInfo.ok`, idpInfo.ok);
-  cli.v3(`IdPInfo.status`, idpInfo.status);
+  cli.v3(
+    `accountApiResp.ok`,
+    accountApiResp.ok,
+    `accountApiResp.status`,
+    accountApiResp.status
+  );
 
-  if (idpInfo.status == 404) {
-    cli.v1(`   404 fetching IdP Info at ${idpInfoUrl}`);
+  if (accountApiResp.status == 404) {
+    cli.v1(`404 fetching Account API at ${accountApiUrl}`);
     return [true, {}];
   }
-  if (!idpInfo.ok) {
-    cli.v1(`IdP Info empty after account create`);
+  if (!accountApiResp.ok) {
+    console.error(`Account API Info empty after account create`);
     return [true, {}];
   }
 
-  /* We are logged in, so we get something like this:  TODO update example with logged in info
+  /* We are logged in, so we get something like this:
      {
  "controls": {
     "password": {
@@ -351,25 +349,26 @@ export async function createPodIdp7(
 }
 */
 
-  const body: any = await idpInfo.json();
-  cli.v3(`IdP Info: ${JSON.stringify(body, null, 3)}`);
-  if (!body?.controls?.password?.create) {
-    cli.v1(`IdP Info is missing expected fields`);
+  const accountApiInfo: any = await accountApiResp.json();
+  cli.v3(`Account API Info: ${JSON.stringify(accountApiInfo, null, 3)}`);
+  if (!accountApiInfo?.controls?.password?.create) {
+    cli.v1(`Account API is missing expected fields`);
     return [true, {}];
   }
 
   /// Create a password for the account ////
+  cli.v2(`Creating password...`);
 
-  const passCreateEndpoint = body?.controls?.password?.create;
-  cli.v2(`IdP Info gave passCreateEndpoint: ${passCreateEndpoint}`);
+  const passCreateEndpoint = accountApiInfo?.controls?.password?.create;
+  cli.v2(`Account API gave passCreateEndpoint: ${passCreateEndpoint}`);
 
   const createPassObj = {
     email: accountEmail(nameValue),
     password: "password",
   };
 
-  cli.v2(`   POSTing to: ${passCreateEndpoint}`);
-  res = await fetch(passCreateEndpoint, {
+  cli.v2(`POSTing to: ${passCreateEndpoint}`);
+  resp = await fetch(passCreateEndpoint, {
     method: "POST",
     headers: {
       Cookie: cookieHeader,
@@ -378,28 +377,43 @@ export async function createPodIdp7(
     },
     body: JSON.stringify(createPassObj),
   });
-  cli.v3(`res.ok`, idpInfo.ok);
-  cli.v3(`res.status`, idpInfo.status);
+  cli.v3(`resp.ok`, resp.ok, `resp.status`, resp.status);
 
-  if (!res.ok) {
-    console.error(`${res.status} - Creating password for ${nameValue} failed:`);
-    const body = await res.text();
+  if (!resp.ok) {
+    const body = await resp.text();
+    // if (body.includes("There already is a login for this e-mail address.")) {
+    if (body.includes("already is a login for")) {
+      cli.v1(
+        `${resp.status} - User ${nameValue} already exists, will ignore. Msg:`,
+        body
+      );
+      //ignore
+      return [false, {}];
+    }
+    console.error(
+      `${resp.status} - Creating password for ${nameValue} failed:`
+    );
     console.error(body);
-    throw new ResponseError(res, body);
+    throw new ResponseError(resp, body);
   }
 
   /// Create a pod and link the WebID in it ////
+  cli.v2(`Creating Pod + WebID...`);
 
-  const podCreateEndpoint = body?.controls?.account?.pod;
-  cli.v2(`IdP Info gave podCreateEndpoint: ${podCreateEndpoint}`);
+  const podCreateEndpoint = accountApiInfo?.controls?.account?.pod;
+  cli.v2(`Account API gave podCreateEndpoint: ${podCreateEndpoint}`);
 
   const podCreateObj = {
     name: nameValue,
+
+    //  "If no WebID value is provided, a WebID will be generated in the pod and immediately linked to the
+    //  account as described in controls.account.webID. This WebID will then be the WebID that has initial access."
+
     // settings: {  webId: 'custom'},
   };
 
-  cli.v2(`   POSTing to: ${podCreateEndpoint}`);
-  res = await fetch(podCreateEndpoint, {
+  cli.v2(`POSTing to: ${podCreateEndpoint}`);
+  resp = await fetch(podCreateEndpoint, {
     method: "POST",
     headers: {
       Cookie: cookieHeader,
@@ -408,68 +422,30 @@ export async function createPodIdp7(
     },
     body: JSON.stringify(podCreateObj),
   });
-  cli.v3(`res.ok`, idpInfo.ok);
-  cli.v3(`res.status`, idpInfo.status);
+  cli.v3(`resp.ok`, accountApiResp.ok, `resp.status`, accountApiResp.status);
 
-  if (!res.ok) {
+  if (!resp.ok) {
     console.error(
-      `${res.status} - Creating Pod & WebID for ${nameValue} failed:`
+      `${resp.status} - Creating Pod & WebID for ${nameValue} failed:`
     );
-    const body = await res.text();
+    const body = await resp.text();
     console.error(body);
-    throw new ResponseError(res, body);
+    throw new ResponseError(resp, body);
   }
 
-  // const settings = {
-  //   podName: nameValue,
-  //   email: accountEmail(nameValue),
-  //   password: "password",
-  //   confirmPassword: "password",
-  //   register: true,
-  //   createPod: true,
-  //   createWebId: true,
-  // };
-  //
-  // let idpPath = `.account`;
-
-  // // @ts-ignore
-  // res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
-  //   method: "POST",
-  //   headers: {
-  //     "content-type": "application/json",
-  //     Accept: "application/json",
-  //     Cookie: cookieHeader,
-  //   },
-  //   body: JSON.stringify(settings),
-  // });
-  //
-  // cli.v3(`res.ok`, res.ok);
-  // cli.v3(`res.status`, res.status);
-  //
-  // if (res.status == 404) {
-  //   cli.v1(`   404 registering user, will try again with alternative path`);
-  //
-  //   return [true, {}];
-  // }
-  //
-  // cli.v3(`res.ok`, res.ok);
-  // cli.v3(`res.status`, res.status);
-  //
-  // const body = await res.text();
-  // if (!res.ok) {
-  //   if (body.includes("Account already exists")) {
-  //     //ignore
-  //     return [false, {}];
-  //   }
-  //   console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
-  //   console.error(body);
-  //   throw new ResponseError(res, body);
-  // }
-  //
-  // const jsonResponse = JSON.parse(body);
-  // return [false, jsonResponse];
-  throw new Error("Implementation incomplete");
-  return [false, {}];
+  let accountInfoEndpoint = accountApiInfo?.controls?.account?.account;
+  const accountInfoResp = await fetch(accountInfoEndpoint, {
+    method: "GET",
+    headers: { Cookie: cookieHeader, Accept: "application/json" },
+  });
+  if (!accountInfoResp.ok) {
+    console.error(`${resp.status} - Failed to get account info:`);
+    const body = await resp.text();
+    console.error(body);
+    throw new ResponseError(resp, body);
+  }
+  const accountInfoObj: any = await resp.json();
+  return [false, accountInfoObj];
 }
 
 export async function uploadPodFile(
@@ -487,7 +463,7 @@ export async function uploadPodFile(
     retry = false;
     if (debugLogging) {
       console.log(
-        `   Will upload file to account ${account}, pod path "${podFileRelative}"`
+        `Will upload file to account ${account}, pod path "${podFileRelative}"`
       );
     }
 
