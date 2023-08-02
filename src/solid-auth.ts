@@ -4,10 +4,9 @@ import {
   generateDpopKeyPair,
 } from "@inrupt/solid-client-authn-core";
 import { ResponseError } from "./error.js";
-import { KeyPair } from "@inrupt/solid-client-authn-core/src/authenticatedFetch/dpopUtils";
 import { AnyFetchType } from "./generic-fetch.js";
+import { KeyPair } from "@inrupt/solid-client-authn-core/src/authenticatedFetch/dpopUtils";
 import { CliArgs } from "./css-populate-args.js";
-import fetch from "node-fetch";
 import {
   AccountApiInfo,
   accountLogin,
@@ -34,7 +33,7 @@ export async function createUserToken(
   cssBaseUrl: string,
   account: string,
   password: string,
-  fetcher: AnyFetchType = fetch
+  fetcher: AnyFetchType = fetch,
 ): Promise<UserToken> {
   cli.v2("Creating Token (client-credential)...");
 
@@ -71,7 +70,6 @@ export async function createUserTokenv6(
   //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
-  const startTime = new Date().getTime();
   let res = null;
   let body = null;
   try {
@@ -92,6 +90,8 @@ export async function createUserTokenv6(
       console.error(`Fetching user token took too long: aborted`);
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
   if (!res || !res.ok) {
     console.error(
@@ -169,7 +169,7 @@ export async function getUserAuthFetch(
   account: string,
   token: UserToken,
   fetcher: AnyFetchType = fetch,
-  accessToken: AccessToken | null = null
+  accessToken: AccessToken | null = null,
 ): Promise<[AnyFetchType, AccessToken]> {
   //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
   const { id, secret } = token;
@@ -200,6 +200,7 @@ export async function getUserAuthFetch(
       });
 
       const body = await res.text();
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         console.error(

@@ -226,6 +226,8 @@ export async function createClientCredential(
       console.error(`Fetching user token took too long: aborted`);
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
   if (!res || !res.ok) {
     console.error(

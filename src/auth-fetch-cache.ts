@@ -26,7 +26,7 @@ export class AuthFetchCache {
 
   constructor(
     cli: CliArgs,
-    cssBaseUrl: string, //there might be multiple css server
+    cssBaseUrl: string, //there might be multiple css servers, this cache is for one specific server
     authenticate: boolean,
     authenticateCache: "none" | "token" | "all",
     fetcher: AnyFetchType = es6fetch
@@ -77,7 +77,7 @@ export class AuthFetchCache {
         this.cssBaseUrl,
         account,
         "password",
-        this.fetcher
+        this.fetcher,
       );
       this.tokenFetchCount++;
     }
