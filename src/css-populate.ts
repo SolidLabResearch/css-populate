@@ -19,13 +19,22 @@ async function main() {
   const cli = getCliArgs();
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
 
-  const authFetchCache = new AuthFetchCache(cli, true, "all", fetcher);
+  //note: all functions expect cssBaseUrl, but main always uses cli.cssBaseUrl
+  //      if cli args are added for multi-CSS server populate, only main needs to change.
+
+  const authFetchCache = new AuthFetchCache(
+    cli,
+    cli.cssBaseUrl,
+    true,
+    "all",
+    fetcher
+  );
 
   if (cli.generateUsers) {
     await generatePodsAndUsers(
       cli,
-      authFetchCache,
       cli.cssBaseUrl,
+      authFetchCache,
       cli.userCount
     );
   }
@@ -33,6 +42,7 @@ async function main() {
   if (cli.generateVariableSize) {
     await generateVariableSizeFiles(
       authFetchCache,
+      cli,
       cli.cssBaseUrl,
       cli.userCount,
       cli.addAclFiles,
@@ -46,6 +56,7 @@ async function main() {
   if (cli.generateFixedSize) {
     await generateFixedSizeFiles(
       authFetchCache,
+      cli,
       cli.cssBaseUrl,
       cli.userCount,
       cli.fileCount,
@@ -62,6 +73,7 @@ async function main() {
     await generateRdfFiles(
       cli.baseRdfFile || "error",
       authFetchCache,
+      cli,
       cli.cssBaseUrl,
       cli.userCount,
       cli.addAclFiles,
@@ -72,6 +84,7 @@ async function main() {
   if (cli.generateFromLdbcDir && cli.generatedDataBaseDir) {
     await generatePodsWithLdbcFiles(
       authFetchCache,
+      cli,
       cli.cssBaseUrl,
       cli.generatedDataBaseDir,
       cli.addAclFiles,

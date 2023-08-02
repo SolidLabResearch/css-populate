@@ -26,12 +26,13 @@ export class AuthFetchCache {
 
   constructor(
     cli: CliArgs,
+    cssBaseUrl: string, //there might be multiple css server
     authenticate: boolean,
     authenticateCache: "none" | "token" | "all",
     fetcher: AnyFetchType = es6fetch
   ) {
     this.cli = cli;
-    this.cssBaseUrl = cli.cssBaseUrl;
+    this.cssBaseUrl = cssBaseUrl;
     this.authenticate = authenticate;
     this.authenticateCache = authenticateCache;
     this.fetcher = fetcher;
@@ -82,6 +83,7 @@ export class AuthFetchCache {
     }
     if (!theFetch) {
       [theFetch, accessToken] = await getUserAuthFetch(
+        this.cli,
         this.cssBaseUrl,
         account,
         userToken,

@@ -1,8 +1,9 @@
 import { ResponseError } from "./error.js";
 import { AnyFetchType } from "./generic-fetch.js";
+import { CliArgs } from "./css-populate-args.js";
 
 export async function downloadPodFile(
-  cssBaseUrl: string,
+  cli: CliArgs,
   account: string,
   podFileRelative: string,
   authFetch: AnyFetchType,
@@ -12,10 +13,13 @@ export async function downloadPodFile(
     `   Will download file from account ${account}, pod path "${podFileRelative}"`
   );
 
-  const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
-    method: "GET",
-    headers: { accept: contentType },
-  });
+  const res = await authFetch(
+    `${cli.cssBaseUrl}${account}/${podFileRelative}`,
+    {
+      method: "GET",
+      headers: { accept: contentType },
+    }
+  );
 
   // console.log(`res.ok`, res.ok);
   // console.log(`res.status`, res.status);

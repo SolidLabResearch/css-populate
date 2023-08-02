@@ -13,6 +13,7 @@ import {
   RDFExtMap,
   RDFTypeValues,
 } from "./rdf-helpers.js";
+import { CliArgs } from "./css-populate-args.js";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -29,6 +30,7 @@ function generateContent(byteCount: number): ArrayBuffer {
 
 export async function generateVariableSizeFiles(
   authFetchCache: AuthFetchCache,
+  cli: CliArgs,
   cssBaseUrl: string,
   userCount: number,
   addAclFiles: boolean = false,
@@ -61,7 +63,7 @@ export async function generateVariableSizeFiles(
     const account = `user${i}`;
     const authFetch = await authFetchCache.getAuthFetcher(i);
     // await uploadPodFile(
-    //   cssBaseUrl,
+    //   cli,
     //   account,
     //   "DUMMY DATA FOR " + account,
     //   "dummy.txt",
@@ -70,6 +72,7 @@ export async function generateVariableSizeFiles(
 
     for (const [fileName, fileContent] of files) {
       await uploadPodFile(
+        cli,
         cssBaseUrl,
         account,
         fileContent,
@@ -80,6 +83,7 @@ export async function generateVariableSizeFiles(
       );
 
       await addAuthZFiles(
+        cli,
         cssBaseUrl,
         account,
         authFetch,
@@ -100,6 +104,7 @@ export async function generateVariableSizeFiles(
 
 export async function generateFixedSizeFiles(
   authFetchCache: AuthFetchCache,
+  cli: CliArgs,
   cssBaseUrl: string,
   userCount: number,
   fileCount: number,
@@ -125,6 +130,7 @@ export async function generateFixedSizeFiles(
     for (let j = 0; j < fileCount; j++) {
       const fileName = `fixed_${j}`;
       await uploadPodFile(
+        cli,
         cssBaseUrl,
         account,
         fileContent,
@@ -135,6 +141,7 @@ export async function generateFixedSizeFiles(
       );
 
       await addAuthZFiles(
+        cli,
         cssBaseUrl,
         account,
         authFetch,
@@ -167,6 +174,7 @@ export async function generateFixedSizeFiles(
 export async function generateRdfFiles(
   inputBaseRdfFile: string,
   authFetchCache: AuthFetchCache,
+  cli: CliArgs,
   cssBaseUrl: string,
   userCount: number,
   addAclFiles: boolean = false,
@@ -206,6 +214,7 @@ export async function generateRdfFiles(
 
     for (const fileInfo of fileInfos) {
       await uploadPodFile(
+        cli,
         cssBaseUrl,
         account,
         fileInfo.buffer,
@@ -216,6 +225,7 @@ export async function generateRdfFiles(
       );
 
       await addAuthZFiles(
+        cli,
         cssBaseUrl,
         account,
         authFetch,

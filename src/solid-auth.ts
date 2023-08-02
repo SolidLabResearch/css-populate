@@ -10,6 +10,8 @@ import { CliArgs } from "./css-populate-args.js";
 import fetch from "node-fetch";
 import {
   AccountApiInfo,
+  accountLogin,
+  createClientCredential,
   getAccountApiInfo,
   getAccountInfo,
 } from "./css-accounts-api.js";
@@ -37,13 +39,15 @@ export async function createUserToken(
   cli.v2("Creating Token (client-credential)...");
 
   cli.v2("Checking Account API info...");
-  const basicAccountApiInfo = await getAccountApiInfo(cli);
+  const basicAccountApiInfo = await getAccountApiInfo(
+    cli,
+    `${cssBaseUrl}.account/`
+  );
   if (basicAccountApiInfo && basicAccountApiInfo?.controls?.account?.create) {
     cli.v2(`Account API confirms v7`);
 
     return await createUserTokenv7(
       cli,
-      cssBaseUrl,
       account,
       password,
       fetcher,
@@ -54,10 +58,11 @@ export async function createUserToken(
   }
 
   cli.v2(`Assuming account API v6`);
-  return await createUserTokenv6(cssBaseUrl, account, password, fetcher);
+  return await createUserTokenv6(cli, cssBaseUrl, account, password, fetcher);
 }
 
 export async function createUserTokenv6(
+  cli: CliArgs,
   cssBaseUrl: string,
   account: string,
   password: string,
@@ -102,50 +107,25 @@ export async function createUserTokenv6(
 
 export async function createUserTokenv7(
   cli: CliArgs,
-  cssBaseUrl: string,
   account: string,
   password: string,
   fetcher: AnyFetchType = fetch,
   accountApiInfo: AccountApiInfo
 ): Promise<UserToken> {
   ////// Login (= get cookie) /////
-  cli.v2("Logging in...");
-  const loginEndpoint = accountApiInfo.controls?.password?.login;
-  const loginObj = {
-    email: accountEmail(account),
-    password: "password",
-  };
-  if (!loginEndpoint) {
-    throw new Error(
-      `accountApiInfo.controls?.password?.login should not be empty`
-    );
-  }
-
-  cli.v2(`POSTing to: ${loginEndpoint}`);
-  const loginResp = await fetch(loginEndpoint, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(loginObj),
-  });
-  cli.v3(`loginResp.ok`, loginResp.ok, `loginResp.status`, loginResp.status);
-  const cookies = [];
-  for (const [k, v] of loginResp.headers.entries()) {
-    if (k.toLowerCase() === "set-cookie") {
-      cookies.push(v);
-    }
-  }
-  const cookieHeader = cookies
-    .map((c) =>
-      c.substring(0, c.indexOf(";") == -1 ? undefined : c.indexOf(";"))
-    )
-    .reduce((a, b) => a + "; " + b);
-  cli.v3("Got cookie", cookieHeader);
+  const cookieHeader = await accountLogin(
+    cli,
+    accountApiInfo,
+    accountEmail(account),
+    "password"
+  );
 
   ////// Get WebID from account info /////
-  const fullAccountApiInfo = await getAccountApiInfo(cli, cookieHeader);
+  const fullAccountApiInfo = await getAccountApiInfo(
+    cli,
+    accountApiInfo.controls.main.index,
+    cookieHeader
+  );
   if (!fullAccountApiInfo) {
     throw new Error(`Failed to fetch logged in account API info`);
   }
@@ -159,51 +139,15 @@ export async function createUserTokenv7(
   const webId = Object.keys(accountInfo.webIds)[0];
   cli.v2("WebID found", webId);
 
-  cli.v2("Creating Token (client credential)...");
-  const clientCredentialsEndpoint =
-    fullAccountApiInfo.controls?.account?.clientCredentials;
-  if (!clientCredentialsEndpoint) {
-    throw new Error(
-      `fullAccountApiInfo.controls.account.clientCredentials should not be empty`
-    );
-  }
-  //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
-  const startTime = new Date().getTime();
-  let res = null;
-  let body = null;
-  try {
-    res = await fetcher(clientCredentialsEndpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        Accept: "application/json",
-        Cookie: cookieHeader,
-      },
-      body: JSON.stringify({
-        webId: webId,
-      }),
-      signal: controller.signal,
-    });
+  ////// Create Token (client credential) /////
 
-    body = await res.text();
-  } catch (error: any) {
-    if (error.name === "AbortError") {
-      console.error(`Fetching user token took too long: aborted`);
-    }
-    throw error;
-  }
-  if (!res || !res.ok) {
-    console.error(
-      `${res.status} - Creating token for ${account} failed:`,
-      body
-    );
-    throw new ResponseError(res, body);
-  }
-
-  const { id, secret } = JSON.parse(body);
-  return { id, secret };
+  return await createClientCredential(
+    cli,
+    cookieHeader,
+    webId,
+    account,
+    fullAccountApiInfo
+  );
 }
 
 export function stillUsableAccessToken(
@@ -220,6 +164,7 @@ export function stillUsableAccessToken(
 }
 
 export async function getUserAuthFetch(
+  cli: CliArgs,
   cssBaseUrl: string,
   account: string,
   token: UserToken,
