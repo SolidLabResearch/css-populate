@@ -6,9 +6,13 @@ import {
 import { ResponseError } from "./error.js";
 import { KeyPair } from "@inrupt/solid-client-authn-core/src/authenticatedFetch/dpopUtils";
 import { AnyFetchType } from "./generic-fetch.js";
-import { CliArgs } from "./css-populate-args";
+import { CliArgs } from "./css-populate-args.js";
 import fetch from "node-fetch";
-import { AccountApiInfo, getAccountApiInfo } from "./css-accounts-api.js";
+import {
+  AccountApiInfo,
+  getAccountApiInfo,
+  getAccountInfo,
+} from "./css-accounts-api.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -33,39 +37,20 @@ export async function createUserToken(
   cli.v2("Creating Token (client-credential)...");
 
   cli.v2("Checking Account API info...");
-  const accountApiUrl = `${cssBaseUrl}.account/`;
-  const accountApiResp = await fetch(accountApiUrl, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-  });
+  const basicAccountApiInfo = await getAccountApiInfo(cli);
+  if (basicAccountApiInfo && basicAccountApiInfo?.controls?.account?.create) {
+    cli.v2(`Account API confirms v7`);
 
-  cli.v3(
-    `accountApiResp.ok`,
-    accountApiResp.ok,
-    `accountApiResp.status`,
-    accountApiResp.status
-  );
-
-  if (accountApiResp.status === 404) {
-    cli.v1(`404 fetching Account API at ${accountApiUrl}`);
-  }
-  if (accountApiResp.ok) {
-    const body: any = await accountApiResp.json();
-    cli.v3(`Account API: ${JSON.stringify(body, null, 3)}`);
-    if (body?.controls?.account?.create) {
-      cli.v2(`Account API confirms v7`);
-
-      return await createUserTokenv7(
-        cli,
-        cssBaseUrl,
-        account,
-        password,
-        fetcher,
-        body?.controls
-      );
-    } else {
-      cli.v2(`Account API unclear`);
-    }
+    return await createUserTokenv7(
+      cli,
+      cssBaseUrl,
+      account,
+      password,
+      fetcher,
+      basicAccountApiInfo
+    );
+  } else {
+    cli.v2(`Account API is not v7`);
   }
 
   cli.v2(`Assuming account API v6`);
@@ -123,16 +108,18 @@ export async function createUserTokenv7(
   fetcher: AnyFetchType = fetch,
   accountApiInfo: AccountApiInfo
 ): Promise<UserToken> {
-  let controls = accountApiInfo.controls;
-  const clientCredentialsEndpoint = controls?.account?.clientCredentials;
-
   ////// Login (= get cookie) /////
   cli.v2("Logging in...");
-  const loginEndpoint = controls?.password?.login;
+  const loginEndpoint = accountApiInfo.controls?.password?.login;
   const loginObj = {
     email: accountEmail(account),
     password: "password",
   };
+  if (!loginEndpoint) {
+    throw new Error(
+      `accountApiInfo.controls?.password?.login should not be empty`
+    );
+  }
 
   cli.v2(`POSTing to: ${loginEndpoint}`);
   const loginResp = await fetch(loginEndpoint, {
@@ -158,30 +145,28 @@ export async function createUserTokenv7(
   cli.v3("Got cookie", cookieHeader);
 
   ////// Get WebID from account info /////
-  controls = (await getAccountApiInfo(cli, cookieHeader))?.controls;
+  const fullAccountApiInfo = await getAccountApiInfo(cli, cookieHeader);
+  if (!fullAccountApiInfo) {
+    throw new Error(`Failed to fetch logged in account API info`);
+  }
 
   cli.v2("Looking for WebID...");
-  let accountInfoEndpoint = controls?.account?.account;
-  console.assert(
-    accountInfoEndpoint && accountInfoEndpoint.startsWith("http"),
-    "Problem with account info URL",
-    accountInfoEndpoint
+  const accountInfo = await getAccountInfo(
+    cli,
+    cookieHeader,
+    fullAccountApiInfo
   );
-  const accountInfoResp = await fetch(accountInfoEndpoint, {
-    method: "GET",
-    headers: { Cookie: cookieHeader, Accept: "application/json" },
-  });
-  if (!accountInfoResp.ok) {
-    console.error(`${accountInfoResp.status} - Failed to get account info:`);
-    const body = await accountInfoResp.text();
-    console.error(body);
-    throw new ResponseError(accountInfoResp, body);
-  }
-  const accountInfoObj: any = await accountInfoResp.json();
-  const webId = Object.keys(accountInfoObj.webIds)[0];
+  const webId = Object.keys(accountInfo.webIds)[0];
   cli.v2("WebID found", webId);
 
   cli.v2("Creating Token (client credential)...");
+  const clientCredentialsEndpoint =
+    fullAccountApiInfo.controls?.account?.clientCredentials;
+  if (!clientCredentialsEndpoint) {
+    throw new Error(
+      `fullAccountApiInfo.controls.account.clientCredentials should not be empty`
+    );
+  }
   //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);

@@ -6,7 +6,11 @@ import { CONTENT_TYPE_ACL, CONTENT_TYPE_ACR } from "./content-type.js";
 import { makeAclContent } from "./wac-acl.js";
 import { makeAcrContent } from "./acp-acr.js";
 import { CliArgs } from "./css-populate-args.js";
-import { getAccountApiInfo } from "./css-accounts-api.js";
+import {
+  AccountApiInfo,
+  getAccountApiInfo,
+  getAccountInfo,
+} from "./css-accounts-api.js";
 
 function accountEmail(account: string): string {
   return `${account}@example.org`;
@@ -14,6 +18,7 @@ function accountEmail(account: string): string {
 
 /**
  *
+ * @param {string} cli the cli arguments
  * @param {string} authFetchCache The AuthFetchCache
  * @param {string} cssBaseUrl The base URL of the CSS server
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
@@ -24,25 +29,18 @@ export async function createPod(
   cssBaseUrl: string,
   nameValue: string
 ): Promise<Object> {
-  let accountCreateEndpoint = `${cssBaseUrl}.account/account/`;
-
-  let try1 = true;
-  let try6 = true;
-  let try7 = true;
+  let try1, try6, try7;
 
   const accountApiInfo = await getAccountApiInfo(cli);
-  if (!accountApiInfo) {
-    try7 = false;
-  }
-
-  if (accountApiInfo?.controls?.account?.create) {
-    accountCreateEndpoint = accountApiInfo?.controls?.account?.create;
+  if (accountApiInfo && accountApiInfo?.controls?.account?.create) {
     cli.v2(`Account API confirms v7`);
     try1 = false;
     try6 = false;
     try7 = true;
   } else {
     cli.v2(`Account API unclear`);
+    try1 = true;
+    try6 = true;
     try7 = false;
   }
 
@@ -77,7 +75,7 @@ export async function createPod(
       authFetchCache,
       cssBaseUrl,
       nameValue,
-      accountCreateEndpoint
+      accountApiInfo!
     );
   }
 
@@ -197,15 +195,16 @@ export async function createPodIdp6(
  * @param {string} authFetchCache The AuthFetchCache
  * @param {string} cssBaseUrl The base URL of the CSS server
  * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
- * @param {string} accountCreateEndpoint account creation endpoint
+ * @param {string} basicAccountApiInfo AccountApiInfo (not logged in)
  */
 export async function createPodIdp7(
   cli: CliArgs,
   authFetchCache: AuthFetchCache,
   cssBaseUrl: string,
   nameValue: string,
-  accountCreateEndpoint: string
+  basicAccountApiInfo: AccountApiInfo
 ): Promise<[boolean, Object]> {
+  const accountCreateEndpoint = basicAccountApiInfo?.controls?.account?.create;
   cli.v1(`Will create pod "${nameValue}"...`);
 
   //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/b02c8dcac1ca20eb61af62a648e0fc68cecc7dd2/documentation/markdown/usage/account/json-api.md
@@ -267,58 +266,11 @@ export async function createPodIdp7(
   //We have an account now!
 
   cli.v2(`Fetching account endpoints...`);
-  const accountApiUrl = `${cssBaseUrl}.account/`;
-  const accountApiResp = await fetch(accountApiUrl, {
-    method: "GET",
-    headers: { Cookie: cookieHeader, Accept: "application/json" },
-  });
-
-  cli.v3(
-    `accountApiResp.ok`,
-    accountApiResp.ok,
-    `accountApiResp.status`,
-    accountApiResp.status
-  );
-
-  if (accountApiResp.status == 404) {
-    cli.v1(`404 fetching Account API at ${accountApiUrl}`);
+  const fullAccountApiInfo = await getAccountApiInfo(cli, cookieHeader);
+  if (!fullAccountApiInfo) {
     return [true, {}];
   }
-  if (!accountApiResp.ok) {
-    console.error(`Account API Info empty after account create`);
-    return [true, {}];
-  }
-
-  /* We are logged in, so we get something like this:
-     {
- "controls": {
-    "password": {
-       "create": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/login/password/",
-       "forgot": "http://localhost:3000/.account/login/password/forgot/",
-       "login": "http://localhost:3000/.account/login/password/",
-       "reset": "http://localhost:3000/.account/login/password/reset/"
-    },
-    "account": {
-       "create": "http://localhost:3000/.account/account/",
-       "clientCredentials": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/client-credentials/",
-       "pod": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/pod/",
-       "webId": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/webid/",
-       "logout": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/logout/",
-       "account": "http://localhost:3000/.account/account/f8cb94ee-6269-494f-94af-c64480d66f8c/"
-    },
-    "main": {
-       "index": "http://localhost:3000/.account/",
-       "logins": "http://localhost:3000/.account/login/"
-    },
-    "html": ...
- },
- "version": "0.5"
-}
-*/
-
-  const accountApiInfo: any = await accountApiResp.json();
-  cli.v3(`Account API Info: ${JSON.stringify(accountApiInfo, null, 3)}`);
-  if (!accountApiInfo?.controls?.password?.create) {
+  if (!fullAccountApiInfo.controls?.password?.create) {
     cli.v1(`Account API is missing expected fields`);
     return [true, {}];
   }
@@ -326,7 +278,7 @@ export async function createPodIdp7(
   /// Create a password for the account ////
   cli.v2(`Creating password...`);
 
-  const passCreateEndpoint = accountApiInfo?.controls?.password?.create;
+  const passCreateEndpoint = fullAccountApiInfo?.controls?.password?.create;
   cli.v2(`Account API gave passCreateEndpoint: ${passCreateEndpoint}`);
 
   const createPassObj = {
@@ -367,8 +319,13 @@ export async function createPodIdp7(
   /// Create a pod and link the WebID in it ////
   cli.v2(`Creating Pod + WebID...`);
 
-  const podCreateEndpoint = accountApiInfo?.controls?.account?.pod;
+  const podCreateEndpoint = fullAccountApiInfo?.controls?.account?.pod;
   cli.v2(`Account API gave podCreateEndpoint: ${podCreateEndpoint}`);
+  if (!podCreateEndpoint) {
+    throw new Error(
+      `fullAccountApiInfo.controls.account.pod should not be empty`
+    );
+  }
 
   const podCreateObj = {
     name: nameValue,
@@ -389,7 +346,7 @@ export async function createPodIdp7(
     },
     body: JSON.stringify(podCreateObj),
   });
-  cli.v3(`resp.ok`, accountApiResp.ok, `resp.status`, accountApiResp.status);
+  cli.v3(`resp.ok`, resp.ok, `resp.status`, resp.status);
 
   if (!resp.ok) {
     console.error(
@@ -400,19 +357,7 @@ export async function createPodIdp7(
     throw new ResponseError(resp, body);
   }
 
-  let accountInfoEndpoint = accountApiInfo?.controls?.account?.account;
-  const accountInfoResp = await fetch(accountInfoEndpoint, {
-    method: "GET",
-    headers: { Cookie: cookieHeader, Accept: "application/json" },
-  });
-  if (!accountInfoResp.ok) {
-    console.error(`${accountInfoResp.status} - Failed to get account info:`);
-    const body = await accountInfoResp.text();
-    console.error(body);
-    throw new ResponseError(accountInfoResp, body);
-  }
-  const accountInfoObj: any = await accountInfoResp.json();
-  return [false, accountInfoObj];
+  return [false, await getAccountInfo(cli, cookieHeader, fullAccountApiInfo)];
 }
 
 export async function uploadPodFile(
