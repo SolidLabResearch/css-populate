@@ -19,6 +19,15 @@ function accountEmail(account: string): string {
   return `${account}@example.org`;
 }
 
+export interface CreatedUserInfo {
+  IdPType: "CSS"; /// <=v6 or >v7 doesn't matter
+  serverBaseURL: string;
+  webID: string;
+  podRoot: string;
+  username: string;
+  password: string;
+}
+
 /**
  *
  * @param {string} cli the cli arguments
@@ -31,7 +40,7 @@ export async function createPod(
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
   nameValue: string
-): Promise<Object> {
+): Promise<CreatedUserInfo> {
   let try1, try6, try7;
 
   const accountApiInfo = await getAccountApiInfo(cli, `${cssBaseUrl}.account/`);
@@ -48,7 +57,7 @@ export async function createPod(
   }
 
   let mustCreatePod = true;
-  let res: Object | null = null;
+  let res: CreatedUserInfo | null = null;
 
   cli.v2(`Accounts API variants to try: 1=${try1} 6=${try6} 7=${try7}`);
 
@@ -73,6 +82,7 @@ export async function createPod(
   if (try7 && mustCreatePod) {
     [mustCreatePod, res] = await createPodAccountsApi7(
       cli,
+      cssBaseUrl,
       authFetchCache,
       nameValue,
       accountApiInfo!
@@ -95,12 +105,12 @@ export async function createPodAccountsApi1(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  nameValue: string
-): Promise<[boolean, Object]> {
-  cli.v1(`Will create pod "${nameValue}"...`);
+  account: string
+): Promise<[boolean, CreatedUserInfo | null]> {
+  cli.v1(`Will create pod "${account}"...`);
   const settings = {
-    podName: nameValue,
-    email: accountEmail(nameValue),
+    podName: account,
+    email: accountEmail(account),
     password: "password",
     confirmPassword: "password",
     register: true,
@@ -124,34 +134,45 @@ export async function createPodAccountsApi1(
   if (res.status == 404) {
     cli.v1(`404 registering user: incompatible IdP path`);
 
-    return [true, {}];
+    return [true, null];
   }
 
   const body = await res.text();
   if (!res.ok) {
     if (body.includes("Account already exists")) {
       //ignore
-      return [false, {}];
+      return [false, null];
     }
-    console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
+    console.error(`${res.status} - Creating pod for ${account} failed:`);
     console.error(body);
     throw new ResponseError(res, body);
   }
 
   const jsonResponse = JSON.parse(body);
-  return [false, jsonResponse];
+  cli.v3(`Created account info: ${JSON.stringify(jsonResponse, null, 3)}`);
+  return [
+    false,
+    {
+      IdPType: "CSS",
+      serverBaseURL: cssBaseUrl,
+      webID: jsonResponse.webId, //`${cssBaseUrl}${account}/profile/card#me`,
+      podRoot: jsonResponse.podBaseUrl, //`${cssBaseUrl}${account}/`,
+      username: account,
+      password: "password",
+    },
+  ];
 }
 
 export async function createPodAccountsApi6(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  nameValue: string
-): Promise<[boolean, Object]> {
-  cli.v1(`Will create pod "${nameValue}"...`);
+  account: string
+): Promise<[boolean, CreatedUserInfo | null]> {
+  cli.v1(`Will create pod "${account}"...`);
   const settings = {
-    podName: nameValue,
-    email: accountEmail(nameValue),
+    podName: account,
+    email: accountEmail(account),
     password: "password",
     confirmPassword: "password",
     register: true,
@@ -175,45 +196,57 @@ export async function createPodAccountsApi6(
   if (res.status == 404) {
     cli.v1(`404 registering user: incompatible IdP path`);
 
-    return [true, {}];
+    return [true, null];
   }
 
   const body = await res.text();
   if (!res.ok) {
     if (body.includes("Account already exists")) {
       //ignore
-      return [false, {}];
+      return [false, null];
     }
-    console.error(`${res.status} - Creating pod for ${nameValue} failed:`);
+    console.error(`${res.status} - Creating pod for ${account} failed:`);
     console.error(body);
     throw new ResponseError(res, body);
   }
 
   const jsonResponse = JSON.parse(body);
-  return [false, jsonResponse];
+  cli.v3(`Created account info: ${JSON.stringify(jsonResponse, null, 3)}`);
+  return [
+    false,
+    {
+      IdPType: "CSS",
+      serverBaseURL: cssBaseUrl,
+      webID: jsonResponse.webId, //`${cssBaseUrl}${account}/profile/card#me`,
+      podRoot: jsonResponse.podBaseUrl, //`${cssBaseUrl}${account}/`,
+      username: account,
+      password: "password",
+    },
+  ];
 }
 
 /**
  *
  * @param {string} cli CliArgs
  * @param {string} authFetchCache The AuthFetchCache
- * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
+ * @param {string} account The name used to create the pod (same value as you would give in the register form online)
  * @param {string} basicAccountApiInfo AccountApiInfo (not logged in)
  */
 export async function createPodAccountsApi7(
   cli: CliArgs,
+  cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  nameValue: string,
+  account: string,
   basicAccountApiInfo: AccountApiInfo
-): Promise<[boolean, Object]> {
+): Promise<[boolean, CreatedUserInfo | null]> {
   const cookieHeader = await createEmptyAccount(
     cli,
-    nameValue,
+    account,
     basicAccountApiInfo
   );
   if (!cookieHeader) {
     cli.v1(`404 registering user: incompatible Accounts API path`);
-    return [true, {}];
+    return [true, null];
   }
 
   //We have an account now! And the cookies to use it.
@@ -225,40 +258,55 @@ export async function createPodAccountsApi7(
     cookieHeader
   );
   if (!fullAccountApiInfo) {
-    return [true, {}];
+    return [true, null];
   }
   if (!fullAccountApiInfo.controls?.password?.create) {
     cli.v1(`Account API is missing expected fields`);
-    return [true, {}];
+    return [true, null];
   }
 
   /// Create a password for the account ////
   const passwordCreated = await createPassword(
     cli,
     cookieHeader,
-    nameValue,
-    accountEmail(nameValue),
+    account,
+    accountEmail(account),
     "password",
     fullAccountApiInfo
   );
   if (!passwordCreated) {
     //user already existed. We ignore that.
-    return [false, {}];
+    return [false, null];
   }
 
   /// Create a pod and link the WebID in it ////
   const createdPod = await createAccountPod(
     cli,
     cookieHeader,
-    nameValue,
+    account,
     fullAccountApiInfo
   );
   if (!createdPod) {
     //pod not created
-    return [true, {}];
+    return [true, null];
   }
 
-  return [false, await getAccountInfo(cli, cookieHeader, fullAccountApiInfo)];
+  const accountInfo = await getAccountInfo(
+    cli,
+    cookieHeader,
+    fullAccountApiInfo
+  );
+  return [
+    false,
+    {
+      IdPType: "CSS",
+      serverBaseURL: cssBaseUrl,
+      webID: accountInfo.webIds[0],
+      podRoot: accountInfo.pods[0],
+      username: account,
+      password: "password",
+    },
+  ];
 }
 
 export async function uploadPodFile(

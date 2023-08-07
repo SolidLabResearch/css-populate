@@ -9,15 +9,18 @@ import {
   generateRdfFiles,
   generateVariableSizeFiles,
 } from "./generate-files.js";
-import { generatePodsAndUsers } from "./generate-users.js";
+import { CreatedUserInfo, generatePodsAndUsers } from "./generate-users.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
 import nodeFetch from "node-fetch";
 import { getCliArgs } from "./css-populate-args.js";
+import fs from "fs";
 
 async function main() {
   const cli = getCliArgs();
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
+
+  const createdUsersInfo: CreatedUserInfo[] = [];
 
   for (const cssBaseUrl of cli.cssBaseUrl) {
     const authFetchCache = new AuthFetchCache(
@@ -29,11 +32,13 @@ async function main() {
     );
 
     if (cli.generateUsers) {
+      //TODO might not want to create all users everywhere
       await generatePodsAndUsers(
         cli,
         cssBaseUrl,
         authFetchCache,
-        cli.userCount
+        cli.userCount,
+        createdUsersInfo
       );
     }
 
@@ -89,6 +94,15 @@ async function main() {
         cli.addAcrFiles
       );
     }
+  }
+
+  if (cli.userJsonOut) {
+    await fs.promises.writeFile(
+      cli.userJsonOut,
+      JSON.stringify(createdUsersInfo, null, 3),
+      { encoding: "utf-8" }
+    );
+    cli.v2(`Wrote user info to '${cli.userJsonOut}'`);
   }
 }
 

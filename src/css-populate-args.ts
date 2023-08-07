@@ -30,9 +30,17 @@ let ya = yargs(hideBin(process.argv))
     group: "Generate users:",
     type: "boolean",
     description:
-      "Generate users. If not specified, it is assumed users have already been generated.",
+      "Generate users (= account + webid + pod). If not specified, it is assumed users have already been generated.",
     default: false,
     demandOption: false,
+  })
+  .option("user-json-out", {
+    group: "Generate users:",
+    type: "string",
+    description:
+      "A file to write user info to in JSON format. (username/password, webID, pod root URL, ...)",
+    demandOption: false,
+    implies: ["generate-users"],
   })
   .option("generate-variable-size", {
     group: "Generate Variable Size Content:",
@@ -187,6 +195,7 @@ export interface CliArgs {
   addAcrFiles: boolean;
   dirDepth: number;
   generateUsers: boolean;
+  userJsonOut?: string;
   addAcFilePerDir: boolean;
   addAcFilePerResource: boolean;
   generateVariableSize: boolean;
@@ -211,6 +220,7 @@ export function getCliArgs(): CliArgs {
     addAclFiles: argv.addAclFiles,
     addAcrFiles: argv.addAcrFiles,
     generateUsers: argv.generateUsers,
+    userJsonOut: argv.userJsonOut,
     dirDepth: argv.dirDepth || 0,
     addAcFilePerDir: argv.addAcFilePerDir,
     addAcFilePerResource: argv.addAcFilePerResource,
