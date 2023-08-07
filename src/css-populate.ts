@@ -3,7 +3,7 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
-import { generatePodsWithLdbcFiles } from "./ldbc-files.js";
+import { populatePodsFromDir } from "./populate-from-dir.js";
 import {
   generateFixedSizeFiles,
   generateRdfFiles,
@@ -19,77 +19,76 @@ async function main() {
   const cli = getCliArgs();
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
 
-  //note: all functions expect cssBaseUrl, but main always uses cli.cssBaseUrl
-  //      if cli args are added for multi-CSS server populate, only main needs to change.
-
-  const authFetchCache = new AuthFetchCache(
-    cli,
-    cli.cssBaseUrl,
-    true,
-    "all",
-    fetcher
-  );
-
-  if (cli.generateUsers) {
-    await generatePodsAndUsers(
+  for (const cssBaseUrl of cli.cssBaseUrl) {
+    const authFetchCache = new AuthFetchCache(
       cli,
-      cli.cssBaseUrl,
-      authFetchCache,
-      cli.userCount
+      cssBaseUrl,
+      true,
+      "all",
+      fetcher
     );
-  }
 
-  if (cli.generateVariableSize) {
-    await generateVariableSizeFiles(
-      authFetchCache,
-      cli,
-      cli.cssBaseUrl,
-      cli.userCount,
-      cli.addAclFiles,
-      cli.addAcrFiles,
-      cli.addAcFilePerResource,
-      cli.addAcFilePerDir,
-      cli.dirDepth
-    );
-  }
+    if (cli.generateUsers) {
+      await generatePodsAndUsers(
+        cli,
+        cssBaseUrl,
+        authFetchCache,
+        cli.userCount
+      );
+    }
 
-  if (cli.generateFixedSize) {
-    await generateFixedSizeFiles(
-      authFetchCache,
-      cli,
-      cli.cssBaseUrl,
-      cli.userCount,
-      cli.fileCount,
-      cli.fileSize,
-      cli.addAclFiles,
-      cli.addAcrFiles,
-      cli.addAcFilePerResource,
-      cli.addAcFilePerDir,
-      cli.dirDepth
-    );
-  }
+    if (cli.generateVariableSize) {
+      await generateVariableSizeFiles(
+        authFetchCache,
+        cli,
+        cssBaseUrl,
+        cli.userCount,
+        cli.addAclFiles,
+        cli.addAcrFiles,
+        cli.addAcFilePerResource,
+        cli.addAcFilePerDir,
+        cli.dirDepth
+      );
+    }
 
-  if (cli.generateRdf) {
-    await generateRdfFiles(
-      cli.baseRdfFile || "error",
-      authFetchCache,
-      cli,
-      cli.cssBaseUrl,
-      cli.userCount,
-      cli.addAclFiles,
-      cli.addAcrFiles
-    );
-  }
+    if (cli.generateFixedSize) {
+      await generateFixedSizeFiles(
+        authFetchCache,
+        cli,
+        cssBaseUrl,
+        cli.userCount,
+        cli.fileCount,
+        cli.fileSize,
+        cli.addAclFiles,
+        cli.addAcrFiles,
+        cli.addAcFilePerResource,
+        cli.addAcFilePerDir,
+        cli.dirDepth
+      );
+    }
 
-  if (cli.generateFromLdbcDir && cli.generatedDataBaseDir) {
-    await generatePodsWithLdbcFiles(
-      authFetchCache,
-      cli,
-      cli.cssBaseUrl,
-      cli.generatedDataBaseDir,
-      cli.addAclFiles,
-      cli.addAcrFiles
-    );
+    if (cli.generateRdf) {
+      await generateRdfFiles(
+        cli.baseRdfFile || "error",
+        authFetchCache,
+        cli,
+        cssBaseUrl,
+        cli.userCount,
+        cli.addAclFiles,
+        cli.addAcrFiles
+      );
+    }
+
+    if (cli.generateFromDir && cli.generatedDataBaseDir) {
+      await populatePodsFromDir(
+        authFetchCache,
+        cli,
+        cssBaseUrl,
+        cli.generatedDataBaseDir,
+        cli.addAclFiles,
+        cli.addAcrFiles
+      );
+    }
   }
 }
 

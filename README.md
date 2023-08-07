@@ -35,9 +35,9 @@ Generate Fixed Size Content:
       --file-count           Number of files to generate                                           [number] [default: 0]
       --file-size            Size of files to generate                                             [number] [default: 0]
 
-Generate Content from LDBC:
-      --generate-from-ldbc-dir  Generate content based on LDBC dir                            [boolean] [default: false]
-      --dir                     Dir with the generated data                                                     [string]
+Use content from a directory:
+      --generate-from-dir  Populate with existing content read from a specified directory     [boolean] [default: false]
+      --dir                Dir with the generated data                                                          [string]
 
 Options:
       --version  Show version number                                                                           [boolean]

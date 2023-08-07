@@ -18,6 +18,7 @@ let ya = yargs(hideBin(process.argv))
     type: "string",
     description: "Base URL of the CSS",
     demandOption: true,
+    array: true,
   })
   .option("user-count", {
     group: "CSS Server:",
@@ -80,10 +81,11 @@ let ya = yargs(hideBin(process.argv))
     demandOption: false,
     implies: ["generate-rdf"],
   })
-  .option("generate-from-ldbc-dir", {
-    group: "Generate Content from LDBC:",
+  .option("generate-from-dir", {
+    group: "Use content from a directory:",
     type: "boolean",
-    description: "Generate content based on LDBC dir",
+    description:
+      "Populate with existing content read from a specified directory",
     default: false,
     demandOption: false,
   })
@@ -130,14 +132,17 @@ let ya = yargs(hideBin(process.argv))
     demandOption: false,
   })
   .option("dir", {
-    group: "Generate Content from LDBC:",
+    group: "Use content from a directory:",
     type: "string",
     description: "Dir with the generated data",
     demandOption: false,
-    implies: ["generate-from-ldbc-dir"],
+    implies: ["generate-from-dir"],
   })
   .help()
   .check((argv, options) => {
+    if (argv.url.length < 1) {
+      return "--url should be specified at least once";
+    }
     if (argv.generateUsers && !argv.userCount) {
       return "--generate-users requires --user-count";
     }
@@ -150,14 +155,14 @@ let ya = yargs(hideBin(process.argv))
     if (argv.generateFixedSize && !argv.fileCount) {
       return "--generate-fixed-size requires --file-count";
     }
-    if (argv.generateFromLdbcDir && !argv.dir) {
-      return "--generate-from-ldbc-dir requires --dir";
+    if (argv.generateFromDir && !argv.dir) {
+      return "--generate-from-dir requires --dir";
     }
     if (argv.generateRdf && !argv.baseRdfFile) {
       return "--generate-rdf requires --base-rdf-file";
     }
     if (
-      !argv.generateFromLdbcDir &&
+      !argv.generateFromDir &&
       !argv.generateVariableSize &&
       !argv.generateRdf &&
       !argv.generateFixedSize
@@ -174,7 +179,7 @@ const argv = ya.parseSync();
 
 export interface CliArgs {
   verbosity_count: number;
-  cssBaseUrl: string;
+  cssBaseUrl: string[];
   userCount: number;
   fileSize: number;
   fileCount: number;
@@ -187,7 +192,7 @@ export interface CliArgs {
   generateVariableSize: boolean;
   generateFixedSize: boolean;
   generateRdf: boolean;
-  generateFromLdbcDir: boolean;
+  generateFromDir: boolean;
   generatedDataBaseDir?: string;
   baseRdfFile?: string;
 
@@ -199,7 +204,7 @@ export interface CliArgs {
 export function getCliArgs(): CliArgs {
   return {
     verbosity_count: argv.v,
-    cssBaseUrl: argv.url.endsWith("/") ? argv.url : argv.url + "/",
+    cssBaseUrl: argv.url.map((u) => (u.endsWith("/") ? u : u + "/")),
     userCount: argv.userCount || 1,
     fileSize: argv.fileSize || 10,
     fileCount: argv.fileCount || 1,
@@ -212,7 +217,7 @@ export function getCliArgs(): CliArgs {
     generateVariableSize: argv.generateVariableSize,
     generateFixedSize: argv.generateFixedSize,
     generateRdf: argv.generateRdf,
-    generateFromLdbcDir: argv.generateFromLdbcDir,
+    generateFromDir: argv.generateFromDir,
     generatedDataBaseDir:
       argv.source === "dir"
         ? argv.dir?.endsWith("/")

@@ -55,6 +55,7 @@ export async function createPod(
   if (try1 && mustCreatePod) {
     [mustCreatePod, res] = await createPodAccountsApi1(
       cli,
+      cssBaseUrl,
       authFetchCache,
       nameValue
     );
@@ -63,6 +64,7 @@ export async function createPod(
   if (try6 && mustCreatePod) {
     [mustCreatePod, res] = await createPodAccountsApi6(
       cli,
+      cssBaseUrl,
       authFetchCache,
       nameValue
     );
@@ -91,6 +93,7 @@ export async function createPod(
 
 export async function createPodAccountsApi1(
   cli: CliArgs,
+  cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
   nameValue: string
 ): Promise<[boolean, Object]> {
@@ -107,10 +110,10 @@ export async function createPodAccountsApi1(
 
   let idpPath = `idp`;
 
-  cli.v2(`POSTing to: ${cli.cssBaseUrl}${idpPath}/register/`);
+  cli.v2(`POSTing to: ${cssBaseUrl}${idpPath}/register/`);
 
   // @ts-ignore
-  let res = await fetch(`${cli.cssBaseUrl}${idpPath}/register/`, {
+  let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
     method: "POST",
     headers: { "content-type": "application/json", Accept: "application/json" },
     body: JSON.stringify(settings),
@@ -141,6 +144,7 @@ export async function createPodAccountsApi1(
 
 export async function createPodAccountsApi6(
   cli: CliArgs,
+  cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
   nameValue: string
 ): Promise<[boolean, Object]> {
@@ -157,10 +161,10 @@ export async function createPodAccountsApi6(
 
   let idpPath = `.account`;
 
-  cli.v2(`POSTing to: ${cli.cssBaseUrl}${idpPath}/register/`);
+  cli.v2(`POSTing to: ${cssBaseUrl}${idpPath}/register/`);
 
   // @ts-ignore
-  let res = await fetch(`${cli.cssBaseUrl}${idpPath}/register/`, {
+  let res = await fetch(`${cssBaseUrl}${idpPath}/register/`, {
     method: "POST",
     headers: { "content-type": "application/json", Accept: "application/json" },
     body: JSON.stringify(settings),
