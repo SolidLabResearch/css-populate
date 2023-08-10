@@ -47,6 +47,12 @@ async function main() {
         cli.userCount,
         createdUsersInfo
       );
+    } else {
+      //we need to register the index-name mapping of the users
+      for (let i = 0; i < cli.userCount; i++) {
+        const account = `user${i}`;
+        authFetchCache.registerAccountName(i, account);
+      }
     }
 
     if (cli.generateVariableSize) {

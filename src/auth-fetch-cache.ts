@@ -14,7 +14,8 @@ export class AuthFetchCache {
   authenticateCache: "none" | "token" | "all" = "none";
   authenticate: boolean = false;
 
-  accountMap: { [account: string]: number } = {};
+  accountMapByName: { [account: string]: number } = {};
+  accountMapByIndex: { [index: number]: string } = {};
 
   cssTokensByUser: Array<UserToken | null> = [];
   authAccessTokenByUser: Array<AccessToken | null> = [];
@@ -50,26 +51,42 @@ export class AuthFetchCache {
   }
 
   registerAccountName(index: number, name: string) {
-    this.accountMap[name] = index;
+    this.accountMapByIndex[index] = name;
+    this.accountMapByName[name] = index;
   }
 
   getAccountIndex(name: string): number {
-    const res = this.accountMap[name];
+    const res = this.accountMapByName[name];
     if (!res) throw Error(`Unknown account '${name}'`);
     return res;
   }
 
+  getAccountName(index: number): string {
+    const res = this.accountMapByIndex[index];
+    if (!res)
+      throw Error(
+        `Unknown account with index ${index} (len=${this.accountMapByName.length})`
+      );
+    return res;
+  }
+
   async getAuthFetcherByName(name: string): Promise<AnyFetchType> {
-    return this.getAuthFetcher(this.accountMap[this.getAccountIndex(name)]);
+    return this.getAuthFetcherInternal(this.getAccountIndex(name), name);
   }
 
   async getAuthFetcher(userId: number): Promise<AnyFetchType> {
+    return this.getAuthFetcherInternal(userId, this.getAccountName(userId));
+  }
+
+  async getAuthFetcherInternal(
+    userId: number,
+    account: string
+  ): Promise<AnyFetchType> {
     this.useCount++;
     if (!this.authenticate) {
       return this.fetcher;
     }
     this.expireAccessToken(userId);
-    const account = `user${userId}`;
     let userToken = null;
     let accessToken = null;
     let theFetch = null;

@@ -60,7 +60,7 @@ export async function generateVariableSizeFiles(
   }
 
   for (let i = 0; i < userCount; i++) {
-    const account = `user${i}`;
+    const account = authFetchCache.getAccountName(i);
     const authFetch = await authFetchCache.getAuthFetcher(i);
     // await uploadPodFile(
     //   cli,
@@ -124,7 +124,7 @@ export async function generateFixedSizeFiles(
 
   for (let i = 0; i < userCount; i++) {
     const startTime = new Date().getTime();
-    const account = `user${i}`;
+    const account = authFetchCache.getAccountName(i);
     const authFetch = await authFetchCache.getAuthFetcher(i);
 
     for (let j = 0; j < fileCount; j++) {
@@ -209,7 +209,7 @@ export async function generateRdfFiles(
   }
 
   for (let i = 0; i < userCount; i++) {
-    const account = `user${i}`;
+    const account = authFetchCache.getAccountName(i);
     const authFetch = await authFetchCache.getAuthFetcher(i);
 
     for (const fileInfo of fileInfos) {
