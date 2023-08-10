@@ -12,15 +12,36 @@ export interface CreatedUserInfo {
   password: string;
 }
 
-export async function generatePodsAndUsers(
+export async function generateAccountsAndPods(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
   generateCount: number,
   createdUserArr: CreatedUserInfo[]
 ) {
+  const accounts: string[] = [];
   for (let i = 0; i < generateCount; i++) {
     const account = `user${i}`;
+    accounts.push(account);
+  }
+  await generateAccountsAndPodsFromList(
+    cli,
+    cssBaseUrl,
+    authFetchCache,
+    accounts,
+    createdUserArr
+  );
+}
+
+export async function generateAccountsAndPodsFromList(
+  cli: CliArgs,
+  cssBaseUrl: string,
+  authFetchCache: AuthFetchCache,
+  accounts: string[],
+  createdUserArr: CreatedUserInfo[]
+) {
+  let i = 0;
+  for (const account of accounts) {
     const createdUserInfo = await createPod(
       cli,
       cssBaseUrl,
@@ -29,6 +50,7 @@ export async function generatePodsAndUsers(
     );
     if (createdUserInfo) createdUserArr.push(createdUserInfo);
 
+    authFetchCache.registerAccountName(i, account);
     const authFetch = await authFetchCache.getAuthFetcher(i);
     // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
     await uploadPodFile(
@@ -41,5 +63,6 @@ export async function generatePodsAndUsers(
       CONTENT_TYPE_TXT,
       i < 2
     );
+    i += 1;
   }
 }

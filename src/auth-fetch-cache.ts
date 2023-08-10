@@ -14,6 +14,8 @@ export class AuthFetchCache {
   authenticateCache: "none" | "token" | "all" = "none";
   authenticate: boolean = false;
 
+  accountMap: { [account: string]: number } = {};
+
   cssTokensByUser: Array<UserToken | null> = [];
   authAccessTokenByUser: Array<AccessToken | null> = [];
   authFetchersByUser: Array<AnyFetchType | null> = [];
@@ -47,6 +49,20 @@ export class AuthFetchCache {
     }
   }
 
+  registerAccountName(index: number, name: string) {
+    this.accountMap[name] = index;
+  }
+
+  getAccountIndex(name: string): number {
+    const res = this.accountMap[name];
+    if (!res) throw Error(`Unknown account '${name}'`);
+    return res;
+  }
+
+  async getAuthFetcherByName(name: string): Promise<AnyFetchType> {
+    return this.getAuthFetcher(this.accountMap[this.getAccountIndex(name)]);
+  }
+
   async getAuthFetcher(userId: number): Promise<AnyFetchType> {
     this.useCount++;
     if (!this.authenticate) {
@@ -77,7 +93,7 @@ export class AuthFetchCache {
         this.cssBaseUrl,
         account,
         "password",
-        this.fetcher,
+        this.fetcher
       );
       this.tokenFetchCount++;
     }
