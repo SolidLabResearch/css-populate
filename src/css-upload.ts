@@ -143,6 +143,15 @@ export async function createPodAccountsApi1(
       //ignore
       return [false, null];
     }
+
+    if (body.includes("outside the configured identifier space")) {
+      cli.v1(
+        `error registering account ${account} (${res.status} - ${body}): assuming incompatible IdP path`
+      );
+
+      return [true, null];
+    }
+
     console.error(`${res.status} - Creating pod for ${account} failed:`);
     console.error(body);
     throw new ResponseError(res, body);
@@ -204,6 +213,14 @@ export async function createPodAccountsApi6(
     if (body.includes("Account already exists")) {
       //ignore
       return [false, null];
+    }
+
+    if (body.includes("outside the configured identifier space")) {
+      cli.v1(
+        `error registering account ${account} (${res.status} - ${body}): assuming incompatible IdP path`
+      );
+
+      return [true, null];
     }
     console.error(`${res.status} - Creating pod for ${account} failed:`);
     console.error(body);
