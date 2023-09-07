@@ -119,7 +119,7 @@ async function main() {
   }
 }
 
-async function populateServersFromDir({
+export async function populateServersFromDir({
   verbose,
   rootDir,
   urlToDirMap,
