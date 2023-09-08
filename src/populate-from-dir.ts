@@ -10,7 +10,7 @@ export async function findAccountsFromDir(dir: string): Promise<string[]> {
   const files = await readdir(dir, { withFileTypes: true });
   const res: string[] = [];
   for (const file of files) {
-    if (!file.isDirectory()) res.push(file.name);
+    if (file.isDirectory()) res.push(file.name);
   }
 
   return res;

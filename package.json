@@ -1,6 +1,6 @@
 {
   "name": "@imec-ilabt/css-populate",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "CLI tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
   "type": "module",
   "bin": {
