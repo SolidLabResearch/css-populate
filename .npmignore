@@ -1,5 +1,8 @@
 .idea/**
 
+config-posts-to-person.json
+test-users.json
+
 # Logs
 logs
 *.log

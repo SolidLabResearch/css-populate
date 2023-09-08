@@ -1,7 +1,7 @@
 {
-  "name": "css-populate",
-  "version": "2.1.0",
-  "description": "Tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
+  "name": "@imec-ilabt/css-populate",
+  "version": "2.2.0",
+  "description": "CLI tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
   "type": "module",
   "bin": {
     "css-populate": "./bin/css-populate.js"
@@ -23,7 +23,7 @@
   "bugs": {
     "url": "https://github.com/SolidLabInfra/css-populate/issues"
   },
-  "homepage": "https://github.com/SolidLabInfra/css-populate#readme",
+  "homepage": "https://github.com/SolidLabResearch/css-populate#readme",
   "dependencies": {
     "@inrupt/solid-client-authn-core": "^1.12.2",
     "jsonld-streaming-serializer": "^2.1.0",

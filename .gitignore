@@ -3,6 +3,8 @@
 !.idea/prettier.xml
 !.idea/.name
 
+test-users.json
+
 bin/
 
 # Logs
