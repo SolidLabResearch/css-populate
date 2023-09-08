@@ -37,9 +37,6 @@ export async function populatePodsFromDir(
   //  in generatedDataBaseDir there must be subdirs named for accounts/pods.
   //  in these subdirs, are the files to be stored in these pod
 
-  cli.v1("populatePodsFromDir is not yet implemented");
-  console.error("populatePodsFromDir is not yet implemented");
-
   const accountDirs = await readdir(generatedDataBaseDir, {
     withFileTypes: true,
   });
@@ -57,6 +54,14 @@ export async function populatePodsFromDir(
     const podFiles = await readdir(accountDir.name, { withFileTypes: true });
     const podFilesToUpload: fs.Dirent[] = [];
     podFilesToUpload.push(...podFiles);
+
+    console.log(
+      `populatePodsFromDir will upload files to pod ${account}: ${JSON.stringify(
+        podFilesToUpload.map((e) => e.name),
+        null,
+        3
+      )}`
+    );
 
     while (podFilesToUpload.length > 0) {
       const podFile: fs.Dirent = <fs.Dirent>podFilesToUpload.shift();

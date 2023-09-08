@@ -1,18 +1,18 @@
 {
   "name": "@imec-ilabt/css-populate",
-  "version": "3.0.1",
+  "version": "3.0.3",
   "description": "CLI tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.",
   "type": "module",
   "bin": {
-    "css-populate": "./bin/css-populate.js"
+    "css-populate": "./bin/css-populate-main.js"
   },
-  "exports": "./bin/css-populate.js",
-  "types": "./bin/css-populate.d.ts",
+  "exports": "./bin/css-populate-lib.js",
+  "types": "./bin/css-populate-lib.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "tsc": "tsc",
-    "build": "tsc && chmod u+x ./bin/css-populate.js",
-    "prepublish": "tsc && chmod u+x ./bin/css-populate.js"
+    "build": "tsc && chmod u+x ./bin/css-populate-main.js",
+    "prepublish": "tsc && chmod u+x ./bin/css-populate-main.js"
   },
   "repository": {
     "type": "git",
