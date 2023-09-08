@@ -12,8 +12,8 @@ import {
   generateRdfFiles,
   generateVariableSizeFiles,
 } from "./generate-files.js";
+import { CreatedUserInfo } from "./generate-users.js";
 import {
-  CreatedUserInfo,
   generateAccountsAndPods,
   generateAccountsAndPodsFromList,
 } from "./generate-users.js";
@@ -119,14 +119,13 @@ async function main() {
   }
 }
 
+export type { CreatedUserInfo } from "./generate-users.js";
 export async function populateServersFromDir({
   verbose,
-  rootDir,
   urlToDirMap,
   authorization,
 }: {
   verbose: boolean;
-  rootDir: string;
   urlToDirMap: { [dir: string]: string };
   authorization: "WAC" | "ACP" | undefined;
 }): Promise<CreatedUserInfo[]> {
@@ -150,7 +149,7 @@ export async function populateServersFromDir({
     generateFixedSize: false,
     generateRdf: false,
     generateFromDir: true,
-    generatedDataBaseDir: rootDir,
+    generatedDataBaseDir: Object.values(urlToDirMap)[0],
     baseRdfFile: undefined,
 
     v3: (message?: any, ...optionalParams: any[]) => {},
