@@ -37,6 +37,13 @@ export async function populatePodsFromDir(
   //  in generatedDataBaseDir there must be subdirs named for accounts/pods.
   //  in these subdirs, are the files to be stored in these pod
 
+  //TODO: refactor this, taking into account that we can't get the full path from a DirEnt (that's nodejs >=20, so won't work in 16)
+  //      so we need to store more than just DirEnts in the lists to handle recursive dir uploads (and make the code cleaner)
+
+  console.debug(
+    `populatePodsFromDir(cssBaseUrl=${cssBaseUrl}, generatedDataBaseDir=${generatedDataBaseDir}, addAclFiles=${addAclFiles}, addAcrFiles=${addAcrFiles})`
+  );
+
   const accountDirs = await readdir(generatedDataBaseDir, {
     withFileTypes: true,
   });
@@ -49,9 +56,10 @@ export async function populatePodsFromDir(
     }
 
     const account = accountDir.name;
+    const accountDirPath = `${generatedDataBaseDir}/${account}`;
     const authFetch = await authFetchCache.getAuthFetcherByName(account);
 
-    const podFiles = await readdir(accountDir.name, { withFileTypes: true });
+    const podFiles = await readdir(accountDirPath, { withFileTypes: true });
     const podFilesToUpload: fs.Dirent[] = [];
     podFilesToUpload.push(...podFiles);
 
@@ -66,19 +74,20 @@ export async function populatePodsFromDir(
     while (podFilesToUpload.length > 0) {
       const podFile: fs.Dirent = <fs.Dirent>podFilesToUpload.shift();
       if (podFile.isDirectory()) {
-        const extraFiles = await readdir(accountDir.name, {
+        //TODO this won't work correctly! (so nested dirs are broken until this is fixed)
+        const podFilePath = `${accountDirPath}/${podFile.name}`;
+        const extraFiles = await readdir(podFilePath, {
           withFileTypes: true,
         });
         podFilesToUpload.push(...extraFiles);
       } else if (podFile.isFile()) {
-        console.assert(podFile.name.startsWith(accountDir.name));
-
-        const fileRelPath = podFile.name.substring(accountDir.name.length);
+        const podFilePath = `${accountDirPath}/${podFile.name}`;
+        const fileRelPath = podFilePath.substring(accountDirPath.length + 1);
         cli.v1(
-          `Uploading. account=${account} file='${podFile.name}' fileRelPath='${fileRelPath}'`
+          `Uploading. account=${account} file='${podFilePath}' fileRelPath='${fileRelPath}'`
         );
 
-        const fileContent = await readFile(podFile.name, { encoding: "utf8" });
+        const fileContent = await readFile(podFilePath, { encoding: "utf8" });
         await uploadPodFile(
           cli,
           cssBaseUrl,
@@ -99,7 +108,7 @@ export async function populatePodsFromDir(
           true,
           false,
           false,
-          false,
+          true,
           addAclFiles,
           addAcrFiles
         );

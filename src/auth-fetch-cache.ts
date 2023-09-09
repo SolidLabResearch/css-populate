@@ -57,7 +57,12 @@ export class AuthFetchCache {
 
   getAccountIndex(name: string): number {
     const res = this.accountMapByName[name];
-    if (!res) throw Error(`Unknown account '${name}'`);
+    if (res === undefined || res === null) {
+      console.log(
+        `Known accounts: ${JSON.stringify(Object.keys(this.accountMapByName))}`
+      );
+      throw Error(`Unknown account '${name}'`);
+    }
     return res;
   }
 
