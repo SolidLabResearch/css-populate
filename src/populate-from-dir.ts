@@ -1,19 +1,15 @@
 import fs from "fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
 import { addAuthZFile, addAuthZFiles, uploadPodFile } from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { CONTENT_TYPE_BYTE } from "./content-type.js";
 import { CliArgs } from "./css-populate-args.js";
+import { makeDirListing } from "./file-utils.js";
 
 export async function findAccountsFromDir(dir: string): Promise<string[]> {
-  const files = await readdir(dir, { withFileTypes: true });
-  const res: string[] = [];
-  for (const file of files) {
-    if (file.isDirectory()) res.push(file.name);
-  }
-
-  return res;
+  const listing = await makeDirListing(dir, false);
+  return listing.dirs.map((d) => d.name);
 }
 
 /**
@@ -37,80 +33,92 @@ export async function populatePodsFromDir(
   //  in generatedDataBaseDir there must be subdirs named for accounts/pods.
   //  in these subdirs, are the files to be stored in these pod
 
-  //TODO: refactor this, taking into account that we can't get the full path from a DirEnt (that's nodejs >=20, so won't work in 16)
-  //      so we need to store more than just DirEnts in the lists to handle recursive dir uploads (and make the code cleaner)
-
   console.debug(
     `populatePodsFromDir(cssBaseUrl=${cssBaseUrl}, generatedDataBaseDir=${generatedDataBaseDir}, addAclFiles=${addAclFiles}, addAcrFiles=${addAcrFiles})`
   );
 
-  const accountDirs = await readdir(generatedDataBaseDir, {
-    withFileTypes: true,
-  });
-  for (const accountDir of accountDirs) {
-    if (!accountDir.isDirectory()) {
-      console.warn(
-        `Found non-dir where expecting only account dirs: ${accountDir.name}`
-      );
-      continue;
-    }
+  const dirListing = await makeDirListing(generatedDataBaseDir, false);
 
+  if (dirListing.files) {
+    console.warn(
+      `Found non-dir where expecting only account dirs: ${dirListing.files
+        .map((f) => f.name)
+        .join(", ")}`
+    );
+  }
+  for (const accountDir of dirListing.dirs) {
     const account = accountDir.name;
-    const accountDirPath = `${generatedDataBaseDir}/${account}`;
+    const accountDirPath = accountDir.fullPath;
     const authFetch = await authFetchCache.getAuthFetcherByName(account);
 
-    const podFiles = await readdir(accountDirPath, { withFileTypes: true });
-    const podFilesToUpload: fs.Dirent[] = [];
-    podFilesToUpload.push(...podFiles);
+    const podListing = await makeDirListing(accountDirPath, true);
 
+    // console.log(
+    //   `populatePodsFromDir will create dirs in pod ${account}: ${JSON.stringify(
+    //     podListing.dirs.map((e) => e.pathFromBase),
+    //     null,
+    //     3
+    //   )}`
+    // );
     console.log(
       `populatePodsFromDir will upload files to pod ${account}: ${JSON.stringify(
-        podFilesToUpload.map((e) => e.name),
+        podListing.files.map((e) => e.pathFromBase),
         null,
         3
       )}`
     );
 
-    while (podFilesToUpload.length > 0) {
-      const podFile: fs.Dirent = <fs.Dirent>podFilesToUpload.shift();
-      if (podFile.isDirectory()) {
-        //TODO this won't work correctly! (so nested dirs are broken until this is fixed)
-        const podFilePath = `${accountDirPath}/${podFile.name}`;
-        const extraFiles = await readdir(podFilePath, {
-          withFileTypes: true,
-        });
-        podFilesToUpload.push(...extraFiles);
-      } else if (podFile.isFile()) {
-        const podFilePath = `${accountDirPath}/${podFile.name}`;
-        const fileRelPath = podFilePath.substring(accountDirPath.length + 1);
-        cli.v1(
-          `Uploading. account=${account} file='${podFilePath}' fileRelPath='${fileRelPath}'`
-        );
+    //We don't need to create containers, they should be auto created according to the spec
+    // for (const dirToCreate of podListing.dirs) {
+    //   const podFilePath = `${accountDirPath}/${dirToCreate.pathFromBase}`;
+    //   //TODO create dir in pod
+    // }
 
-        const fileContent = await readFile(podFilePath, { encoding: "utf8" });
-        await uploadPodFile(
+    for (const fileToUpload of podListing.files) {
+      const podFilePath = fileToUpload.fullPath;
+      const filePathInPod = fileToUpload.pathFromBase;
+      const fileName = fileToUpload.name;
+      const fileDirInPod = filePathInPod.substring(
+        0,
+        filePathInPod.length - fileName.length
+      );
+      cli.v1(
+        `Uploading. account=${account} file='${podFilePath}' filePathInPod='${filePathInPod}'`
+      );
+
+      const fileContent = await readFile(podFilePath, { encoding: "utf8" });
+      await uploadPodFile(
+        cli,
+        cssBaseUrl,
+        account,
+        fileContent,
+        filePathInPod,
+        authFetch,
+        CONTENT_TYPE_BYTE, //TODO use correct content type
+        false
+      );
+
+      const authZTypes: ("ACP" | "WAC")[] = [];
+      if (addAclFiles) {
+        authZTypes.push("WAC");
+      }
+      if (addAcrFiles) {
+        authZTypes.push("ACP");
+      }
+      for (const authZType of authZTypes) {
+        await addAuthZFile(
           cli,
           cssBaseUrl,
           account,
-          fileContent,
-          fileRelPath,
           authFetch,
-          CONTENT_TYPE_BYTE, //TODO use correct content type
+          fileDirInPod,
+          fileName,
+          true,
+          false,
+          false,
+          true,
+          authZType,
           false
-        );
-
-        await addAuthZFiles(
-          cli,
-          cssBaseUrl,
-          account,
-          authFetch,
-          fileRelPath,
-          true,
-          false,
-          false,
-          true,
-          addAclFiles,
-          addAcrFiles
         );
       }
     }
