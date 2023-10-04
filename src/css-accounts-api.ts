@@ -1,7 +1,7 @@
 import { CliArgs } from "./css-populate-args.js";
 import fetch from "node-fetch";
 import { ResponseError } from "./error.js";
-import { ProvidedAccountInfo } from "./generate-users";
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 //see
 // https://github.com/CommunitySolidServer/CommunitySolidServer/blob/b02c8dcac1ca20eb61af62a648e0fc68cecc7dd2/documentation/markdown/usage/account/json-api.md

@@ -14,7 +14,7 @@ import {
   getAccountApiInfo,
   getAccountInfo,
 } from "./css-accounts-api.js";
-import { ProvidedAccountInfo } from "./generate-users";
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 export interface CreatedUserInfo {
   IdPType: "CSS"; /// <=v6 or >v7 doesn't matter

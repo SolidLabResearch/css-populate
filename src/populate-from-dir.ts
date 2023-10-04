@@ -6,7 +6,7 @@ import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { CONTENT_TYPE_BYTE } from "./content-type.js";
 import { CliArgs } from "./css-populate-args.js";
 import { makeDirListing } from "./file-utils.js";
-import { accountEmail, ProvidedAccountInfo } from "./generate-users";
+import { accountEmail, ProvidedAccountInfo } from "./generate-users.js";
 
 export interface ProvidedAccountAndDirInfo extends ProvidedAccountInfo {
   accountDir: string;
@@ -74,7 +74,7 @@ export async function populatePodsFromDir(
   const providedAccountInfo: ProvidedAccountAndDirInfo[] =
     await findAccountsFromDir(generatedDataBaseDir);
   for (const ai of providedAccountInfo) {
-    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
+    const authFetch = await authFetchCache.getAuthFetcher(ai);
 
     const podListing = await makeDirListing(ai.accountDir, true);
 

@@ -7,7 +7,7 @@ import {
 } from "./solid-auth.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
 import { CliArgs } from "./css-populate-args.js";
-import { ProvidedAccountInfo } from "./generate-users";
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 export class AuthFetchCache {
   cli: CliArgs;

@@ -58,8 +58,7 @@ export async function generateAccountsAndPodsFromList(
     );
     if (createdUserInfo) createdUserArr.push(createdUserInfo);
 
-    authFetchCache.registerAccountName(i, accountInfo.username);
-    const authFetch = await authFetchCache.getAuthFetcher(i);
+    const authFetch = await authFetchCache.getAuthFetcher(accountInfo);
     // await writePodFileCheat(account, "DUMMY DATA FOR "+account, localPodDir, 'dummy.txt');
     await uploadPodFile(
       cli,

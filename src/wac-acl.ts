@@ -1,5 +1,5 @@
 import { AnyFetchType } from "./generic-fetch.js";
-import { ProvidedAccountInfo } from "./generate-users";
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 export function makeAclContent(
   serverDomainName: string,

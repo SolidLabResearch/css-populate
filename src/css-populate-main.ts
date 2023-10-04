@@ -96,13 +96,6 @@ async function main() {
         providedAccountInfo,
         createdUsersInfo
       );
-    } else {
-      //we need to register the index-name mapping of the accounts
-      let i = 0;
-      for (const ai of providedAccountInfo) {
-        authFetchCache.registerAccountName(i, ai.username);
-        i++;
-      }
     }
 
     if (cli.generateVariableSize) {

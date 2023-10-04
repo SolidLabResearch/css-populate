@@ -14,7 +14,7 @@ import {
   RDFTypeValues,
 } from "./rdf-helpers.js";
 import { CliArgs } from "./css-populate-args.js";
-import { ProvidedAccountInfo } from "./generate-users";
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -61,7 +61,7 @@ export async function generateVariableSizeFiles(
   }
 
   for (const ai of providedAccountInfo) {
-    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
+    const authFetch = await authFetchCache.getAuthFetcher(ai);
     // await uploadPodFile(
     //   cli,
     //   account,
@@ -124,7 +124,7 @@ export async function generateFixedSizeFiles(
 
   for (const ai of providedAccountInfo) {
     const startTime = new Date().getTime();
-    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
+    const authFetch = await authFetchCache.getAuthFetcher(ai);
 
     for (let j = 0; j < fileCount; j++) {
       const fileName = `fixed_${j}`;
@@ -208,7 +208,7 @@ export async function generateRdfFiles(
   }
 
   for (const ai of providedAccountInfo) {
-    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
+    const authFetch = await authFetchCache.getAuthFetcher(ai);
 
     for (const fileInfo of fileInfos) {
       await uploadPodFile(
