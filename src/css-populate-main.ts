@@ -6,17 +6,75 @@ import {
   generateRdfFiles,
   generateVariableSizeFiles,
 } from "./generate-files.js";
-import { CreatedUserInfo } from "./generate-users.js";
-import { generateAccountsAndPods } from "./generate-users.js";
+import {
+  accountEmail,
+  CreatedUserInfo,
+  generateAccountsAndPods,
+  ProvidedAccountInfo,
+} from "./generate-users.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
 import nodeFetch from "node-fetch";
-import { CliArgs, getCliArgs } from "./css-populate-args.js";
+import {
+  AccountAction,
+  AccountSource,
+  getCliArgs,
+} from "./css-populate-args.js";
 import fs from "fs";
+import { readFile } from "node:fs/promises";
 
 async function main() {
   const cli = getCliArgs();
   const fetcher: AnyFetchType = false ? nodeFetch : es6fetch;
+
+  const providedAccountInfo: ProvidedAccountInfo[] = [];
+  if (cli.accountSource === AccountSource.Template) {
+    for (let index = 0; index < cli.accountSourceCount; index++) {
+      const username = cli.accountSourceTemplateUsername.replaceAll(
+        "{{NR}}",
+        `${index}`
+      );
+      providedAccountInfo.push({
+        username,
+        password: cli.accountSourceTemplatePass.replaceAll(
+          "{{NR}}",
+          `${index}`
+        ),
+        podName: username,
+        email: accountEmail(username),
+        index,
+      });
+    }
+  } else if (cli.accountSource === AccountSource.File) {
+    const providedAccountInfoFileContent = await readFile(
+      cli.accountSourceFile || "error",
+      { encoding: "utf8" }
+    );
+    const providedAccountInfoArr = JSON.parse(providedAccountInfoFileContent);
+    if (!Array.isArray(providedAccountInfoArr)) {
+      throw new Error(
+        `File "${cli.accountSourceFile}" does not contain a JSON array.`
+      );
+    }
+    let index = 0;
+    for (const ui of providedAccountInfoArr) {
+      if (!ui.username || !ui.password) {
+        throw new Error(
+          `File "${cli.accountSourceFile}" contains an entry without username and/or password.`
+        );
+      }
+      providedAccountInfo.push({
+        username: ui.username,
+        password: ui.password,
+        podName: ui.padName ?? ui.username,
+        email: ui.email ?? accountEmail(ui.username),
+        index,
+      });
+      index++;
+    }
+  } else {
+    throw new Error(`Unsupported --account-source ${cli.accountSource}`);
+  }
 
   const createdUsersInfo: CreatedUserInfo[] = [];
 
@@ -29,20 +87,21 @@ async function main() {
       fetcher
     );
 
-    if (cli.generateUsers) {
-      //TODO might not want to create all users everywhere
+    if (cli.accountAction != AccountAction.UseExisting) {
+      //TODO handle Auto and Create differently
       await generateAccountsAndPods(
         cli,
         cssBaseUrl,
         authFetchCache,
-        cli.userCount,
+        providedAccountInfo,
         createdUsersInfo
       );
     } else {
-      //we need to register the index-name mapping of the users
-      for (let i = 0; i < cli.userCount; i++) {
-        const account = `user${i}`;
-        authFetchCache.registerAccountName(i, account);
+      //we need to register the index-name mapping of the accounts
+      let i = 0;
+      for (const ai of providedAccountInfo) {
+        authFetchCache.registerAccountName(i, ai.username);
+        i++;
       }
     }
 
@@ -51,7 +110,7 @@ async function main() {
         authFetchCache,
         cli,
         cssBaseUrl,
-        cli.userCount,
+        providedAccountInfo,
         cli.addAclFiles,
         cli.addAcrFiles,
         cli.addAcFilePerResource,
@@ -65,7 +124,7 @@ async function main() {
         authFetchCache,
         cli,
         cssBaseUrl,
-        cli.userCount,
+        providedAccountInfo,
         cli.fileCount,
         cli.fileSize,
         cli.addAclFiles,
@@ -82,7 +141,7 @@ async function main() {
         authFetchCache,
         cli,
         cssBaseUrl,
-        cli.userCount,
+        providedAccountInfo,
         cli.addAclFiles,
         cli.addAcrFiles
       );

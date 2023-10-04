@@ -1,8 +1,9 @@
 import { AnyFetchType } from "./generic-fetch.js";
+import { ProvidedAccountInfo } from "./generate-users";
 
 export function makeAcrContent(
   serverDomainName: string,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   authFetch: AnyFetchType,
   targetFilename: string,
   publicRead: boolean = true,
@@ -10,7 +11,7 @@ export function makeAcrContent(
   publicControl: boolean = false,
   isDir: boolean = false
 ) {
-  const webID = `https://${serverDomainName}/${account}/profile/card#me`;
+  const webID = `https://${serverDomainName}/${accountInfo.podName}/profile/card#me`;
 
   //   return `@prefix acl: <http://www.w3.org/ns/auth/acl#>.
   // @prefix acp: <http://www.w3.org/ns/solid/acp#>.

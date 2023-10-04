@@ -2,7 +2,7 @@ import crypto from "crypto";
 import {
   addAuthZFile,
   addAuthZFiles,
-  createPod,
+  createAccount,
   uploadPodFile,
 } from "./css-upload.js";
 import { AuthFetchCache } from "./auth-fetch-cache.js";
@@ -14,6 +14,7 @@ import {
   RDFTypeValues,
 } from "./rdf-helpers.js";
 import { CliArgs } from "./css-populate-args.js";
+import { ProvidedAccountInfo } from "./generate-users";
 
 function generateContent(byteCount: number): ArrayBuffer {
   return crypto.randomBytes(byteCount).buffer; //fetch can handle ArrayBuffer
@@ -32,7 +33,7 @@ export async function generateVariableSizeFiles(
   authFetchCache: AuthFetchCache,
   cli: CliArgs,
   cssBaseUrl: string,
-  userCount: number,
+  providedAccountInfo: ProvidedAccountInfo[],
   addAclFiles: boolean = false,
   addAcrFiles: boolean = false,
   addAcFilePerResource: boolean = true,
@@ -59,9 +60,8 @@ export async function generateVariableSizeFiles(
     files.push([`${size}.rnd`, Buffer.from(generateContent(size_int))]);
   }
 
-  for (let i = 0; i < userCount; i++) {
-    const account = authFetchCache.getAccountName(i);
-    const authFetch = await authFetchCache.getAuthFetcher(i);
+  for (const ai of providedAccountInfo) {
+    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
     // await uploadPodFile(
     //   cli,
     //   account,
@@ -74,24 +74,24 @@ export async function generateVariableSizeFiles(
       await uploadPodFile(
         cli,
         cssBaseUrl,
-        account,
+        ai,
         fileContent,
         `${subDirs}${fileName}`,
         authFetch,
         CONTENT_TYPE_BYTE,
-        i < 2
+        ai.index < 2
       );
 
       await addAuthZFiles(
         cli,
         cssBaseUrl,
-        account,
+        ai,
         authFetch,
         fileName,
         true,
         false,
         false,
-        i < 2,
+        ai.index < 2,
         addAclFiles,
         addAcrFiles,
         addAcFilePerResource,
@@ -106,7 +106,7 @@ export async function generateFixedSizeFiles(
   authFetchCache: AuthFetchCache,
   cli: CliArgs,
   cssBaseUrl: string,
-  userCount: number,
+  providedAccountInfo: ProvidedAccountInfo[],
   fileCount: number,
   fileSize: number,
   addAclFiles: boolean = false,
@@ -122,34 +122,33 @@ export async function generateFixedSizeFiles(
 
   const fileContent = Buffer.from(generateContent(fileSize));
 
-  for (let i = 0; i < userCount; i++) {
+  for (const ai of providedAccountInfo) {
     const startTime = new Date().getTime();
-    const account = authFetchCache.getAccountName(i);
-    const authFetch = await authFetchCache.getAuthFetcher(i);
+    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
 
     for (let j = 0; j < fileCount; j++) {
       const fileName = `fixed_${j}`;
       await uploadPodFile(
         cli,
         cssBaseUrl,
-        account,
+        ai,
         fileContent,
         `${subDirs}${fileName}`,
         authFetch,
         CONTENT_TYPE_BYTE,
-        i < 2
+        ai.index < 2
       );
 
       await addAuthZFiles(
         cli,
         cssBaseUrl,
-        account,
+        ai,
         authFetch,
         fileName,
         true,
         true,
         false,
-        i < 2,
+        ai.index < 2,
         addAclFiles,
         addAcrFiles,
         addAcFilePerResource,
@@ -160,11 +159,11 @@ export async function generateFixedSizeFiles(
     const stopTime1 = new Date().getTime();
 
     const stopTime2 = new Date().getTime();
-    if (i < 100) {
+    if (ai.index < 100) {
       var duration1_s = (stopTime1 - startTime) / 1000.0;
       var duration2_s = (stopTime2 - stopTime1) / 1000.0;
       console.log(
-        `Uploading ${fileCount} fixed files of size ${fileSize}byte for user ${i} took ${duration1_s}s` +
+        `Uploading ${fileCount} fixed files of size ${fileSize}byte for user ${ai.index} took ${duration1_s}s` +
           ` (+ ${duration2_s}s for 1 acl file)`
       );
     }
@@ -176,7 +175,7 @@ export async function generateRdfFiles(
   authFetchCache: AuthFetchCache,
   cli: CliArgs,
   cssBaseUrl: string,
-  userCount: number,
+  providedAccountInfo: ProvidedAccountInfo[],
   addAclFiles: boolean = false,
   addAcrFiles: boolean = false,
   addAcFilePerResource: boolean = true,
@@ -208,32 +207,31 @@ export async function generateRdfFiles(
     fileInfos.push({ fileName, buffer, contentType });
   }
 
-  for (let i = 0; i < userCount; i++) {
-    const account = authFetchCache.getAccountName(i);
-    const authFetch = await authFetchCache.getAuthFetcher(i);
+  for (const ai of providedAccountInfo) {
+    const authFetch = await authFetchCache.getAuthFetcher(ai.index);
 
     for (const fileInfo of fileInfos) {
       await uploadPodFile(
         cli,
         cssBaseUrl,
-        account,
+        ai,
         fileInfo.buffer,
         `${subDirs}${fileInfo.fileName}`,
         authFetch,
         fileInfo.contentType,
-        i < 2
+        ai.index < 2
       );
 
       await addAuthZFiles(
         cli,
         cssBaseUrl,
-        account,
+        ai,
         authFetch,
         fileInfo.fileName,
         true,
         false,
         false,
-        i < 2,
+        ai.index < 2,
         addAclFiles,
         addAcrFiles,
         addAcFilePerResource,

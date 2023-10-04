@@ -1,6 +1,7 @@
 import { CliArgs } from "./css-populate-args.js";
 import fetch from "node-fetch";
 import { ResponseError } from "./error.js";
+import { ProvidedAccountInfo } from "./generate-users";
 
 //see
 // https://github.com/CommunitySolidServer/CommunitySolidServer/blob/b02c8dcac1ca20eb61af62a648e0fc68cecc7dd2/documentation/markdown/usage/account/json-api.md
@@ -243,7 +244,7 @@ export async function createClientCredential(
 
 export async function createEmptyAccount(
   cli: CliArgs,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   basicAccountApiInfo: AccountApiInfo
 ): Promise<string | null> {
   const accountCreateEndpoint = basicAccountApiInfo?.controls?.account?.create;
@@ -261,7 +262,9 @@ export async function createEmptyAccount(
     return null;
   }
   if (!resp.ok) {
-    console.error(`${resp.status} - Creating pod for ${account} failed:`);
+    console.error(
+      `${resp.status} - Creating account for ${accountInfo.username} failed:`
+    );
     const body = await resp.text();
     console.error(body);
     throw new ResponseError(resp, body);
@@ -287,15 +290,17 @@ export async function createEmptyAccount(
 
   if (!accountUrl || !accountUrl.startsWith("http")) {
     console.error(
-      `Creating pod for ${account} failed: no resource in response: ${JSON.stringify(
-        createAccountBody
-      )}`
+      `Creating account for ${
+        accountInfo.username
+      } failed: no resource in response: ${JSON.stringify(createAccountBody)}`
     );
     throw new ResponseError(resp, createAccountBody);
   }
   if (!cookies) {
     console.error(
-      `Creating pod for ${account} failed: no cookies in response. headers: ${JSON.stringify(
+      `Creating account for ${
+        accountInfo.username
+      } failed: no cookies in response. headers: ${JSON.stringify(
         resp.headers
       )}`
     );
@@ -368,7 +373,7 @@ export async function createPassword(
 export async function createAccountPod(
   cli: CliArgs,
   cookieHeader: string,
-  account: string,
+  podName: string,
   fullAccountApiInfo: AccountApiInfo
 ): Promise<boolean> {
   cli.v2(`Creating Pod + WebID...`);
@@ -382,7 +387,7 @@ export async function createAccountPod(
   }
 
   const podCreateObj = {
-    name: account,
+    name: podName,
 
     //  "If no WebID value is provided, a WebID will be generated in the pod and immediately linked to the
     //  account as described in controls.account.webID. This WebID will then be the WebID that has initial access."
@@ -409,7 +414,7 @@ export async function createAccountPod(
 
   if (!podCreateResp.ok) {
     console.error(
-      `${podCreateResp.status} - Creating Pod & WebID for ${account} failed:`
+      `${podCreateResp.status} - Creating Pod & WebID for ${podName} failed:`
     );
     const body = await podCreateResp.text();
     console.error(body);

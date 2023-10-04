@@ -1,8 +1,9 @@
 import { AnyFetchType } from "./generic-fetch.js";
+import { ProvidedAccountInfo } from "./generate-users";
 
 export function makeAclContent(
   serverDomainName: string,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   authFetch: AnyFetchType,
   targetFilename: string,
   publicRead: boolean = true,
@@ -10,7 +11,7 @@ export function makeAclContent(
   publicControl: boolean = false,
   isDir: boolean = false
 ) {
-  const webID = `https://${serverDomainName}/${account}/profile/card#me`;
+  const webID = `https://${serverDomainName}/${accountInfo.podName}/profile/card#me`;
 
   let inherit = "";
   if (isDir) {

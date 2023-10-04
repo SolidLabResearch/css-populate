@@ -11,7 +11,7 @@ import {
 import { AuthFetchCache } from "./auth-fetch-cache.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
 import nodeFetch from "node-fetch";
-import { CliArgs } from "./css-populate-args.js";
+import { AccountAction, AccountSource, CliArgs } from "./css-populate-args.js";
 
 export type { CreatedUserInfo } from "./generate-users.js";
 export async function populateServersFromDir({
@@ -29,12 +29,19 @@ export async function populateServersFromDir({
     cssBaseUrl: Object.keys(urlToDirMap).map((u) =>
       u.endsWith("/") ? u : u + "/"
     ),
-    userCount: 0,
+
+    accountAction: AccountAction.Auto,
+    //accountSource configs are not used but require values anyway
+    accountSource: AccountSource.File,
+    accountSourceCount: 0,
+    accountSourceFile: "error",
+    accountSourceTemplateUsername: "error",
+    accountSourceTemplatePass: "password",
+
     fileSize: 0,
     fileCount: 0,
     addAclFiles: authorization == "WAC",
     addAcrFiles: authorization == "ACP",
-    generateUsers: true,
     userJsonOut: undefined,
     dirDepth: 0,
     addAcFilePerDir: true,
@@ -65,10 +72,10 @@ export async function populateServersFromDir({
       fetcher
     );
 
-    if (cli.generateUsers) {
+    if (cli.accountAction !== AccountAction.UseExisting) {
       const accounts = await findAccountsFromDir(dir);
       console.log(
-        `Will generate user+pod for server ${cssBaseUrl}: ${JSON.stringify(
+        `Will generate user & pod for server ${cssBaseUrl}: ${JSON.stringify(
           accounts,
           null,
           3

@@ -31,9 +31,9 @@ export interface AccessToken {
 export async function createUserToken(
   cli: CliArgs,
   cssBaseUrl: string,
-  account: string,
+  username: string,
   password: string,
-  fetcher: AnyFetchType = fetch,
+  fetcher: AnyFetchType = fetch
 ): Promise<UserToken> {
   cli.v2("Creating Token (client-credential)...");
 
@@ -47,7 +47,7 @@ export async function createUserToken(
 
     return await createUserTokenv7(
       cli,
-      account,
+      username,
       password,
       fetcher,
       basicAccountApiInfo
@@ -57,7 +57,7 @@ export async function createUserToken(
   }
 
   cli.v2(`Assuming account API v6`);
-  return await createUserTokenv6(cli, cssBaseUrl, account, password, fetcher);
+  return await createUserTokenv6(cli, cssBaseUrl, username, password, fetcher);
 }
 
 export async function createUserTokenv6(
@@ -166,10 +166,10 @@ export function stillUsableAccessToken(
 export async function getUserAuthFetch(
   cli: CliArgs,
   cssBaseUrl: string,
-  account: string,
+  username: string,
   token: UserToken,
   fetcher: AnyFetchType = fetch,
-  accessToken: AccessToken | null = null,
+  accessToken: AccessToken | null = null
 ): Promise<[AnyFetchType, AccessToken]> {
   //see https://github.com/CommunitySolidServer/CommunitySolidServer/blob/main/documentation/markdown/usage/client-credentials.md
   const { id, secret } = token;
@@ -204,7 +204,7 @@ export async function getUserAuthFetch(
 
       if (!res.ok) {
         console.error(
-          `${res.status} - Creating access token for ${account} failed:`
+          `${res.status} - Creating access token for ${username} failed:`
         );
         console.error(body);
         throw new ResponseError(res, body);
