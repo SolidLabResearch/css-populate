@@ -99,12 +99,17 @@ export async function getAccountInfo(
   cookieHeader: string,
   fullAccountApiInfo: AccountApiInfo
 ): Promise<AccountInfo> {
-  const accountInfoUrl = fullAccountApiInfo.controls?.account?.account;
-  if (!accountInfoUrl) {
-    throw new Error(
-      `accountApiInfo.controls.account.account should not be empty`
-    );
-  }
+  const accountInfoUrl = fullAccountApiInfo.controls?.main?.index;
+  // const accountInfoUrl = fullAccountApiInfo.controls?.account?.account;
+  // if (!accountInfoUrl) {
+  //   throw new Error(
+  //     `accountApiInfo.controls.account.account should not be empty. Got: ${JSON.stringify(
+  //       fullAccountApiInfo,
+  //       null,
+  //       3
+  //     )}`
+  //   );
+  // }
   console.assert(
     accountInfoUrl && accountInfoUrl.startsWith("http"),
     "Problem with account info URL",
@@ -275,7 +280,7 @@ export async function createEmptyAccount(
   //   - resource field with account url
 
   const createAccountBody: any = await resp.json();
-  const accountUrl: string | undefined = createAccountBody?.resource;
+  // const accountUrl: string | undefined = createAccountBody?.resource;
   const cookies = [];
   for (const [k, v] of resp.headers.entries()) {
     if (k.toLowerCase() === "set-cookie") {
@@ -288,18 +293,18 @@ export async function createEmptyAccount(
     )
     .reduce((a, b) => a + "; " + b);
 
-  if (!accountUrl || !accountUrl.startsWith("http")) {
-    console.error(
-      `Creating account for ${
-        accountInfo.username
-      } failed: no resource in response: ${JSON.stringify(
-        createAccountBody,
-        null,
-        3
-      )}`
-    );
-    throw new ResponseError(resp, createAccountBody);
-  }
+  // if (!accountUrl || !accountUrl.startsWith("http")) {
+  //   console.error(
+  //     `Creating account for ${
+  //       accountInfo.username
+  //     } failed: no resource in response: ${JSON.stringify(
+  //       createAccountBody,
+  //       null,
+  //       3
+  //     )}`
+  //   );
+  //   throw new ResponseError(resp, createAccountBody);
+  // }
   if (!cookies) {
     console.error(
       `Creating account for ${
