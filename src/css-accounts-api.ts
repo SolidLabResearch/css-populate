@@ -292,7 +292,11 @@ export async function createEmptyAccount(
     console.error(
       `Creating account for ${
         accountInfo.username
-      } failed: no resource in response: ${JSON.stringify(createAccountBody)}`
+      } failed: no resource in response: ${JSON.stringify(
+        createAccountBody,
+        null,
+        3
+      )}`
     );
     throw new ResponseError(resp, createAccountBody);
   }
@@ -301,7 +305,9 @@ export async function createEmptyAccount(
       `Creating account for ${
         accountInfo.username
       } failed: no cookies in response. headers: ${JSON.stringify(
-        resp.headers
+        resp.headers,
+        null,
+        3
       )}`
     );
     throw new ResponseError(resp, createAccountBody);
