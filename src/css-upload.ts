@@ -88,12 +88,21 @@ export async function createAccount(
     );
   }
 
-  if (mustCreatePod || !res) {
+  if (mustCreatePod) {
     console.error(
       `createPod: Accounts API problem: 404 for all Accounts API variants`
     );
     throw new Error(
       `createPod: Accounts API problem: 404 for all Accounts API variants`
+    );
+  }
+
+  if (!res) {
+    console.error(
+      `createPod: pod already exists, but no method implemented to extract all meta data we need`
+    );
+    throw new Error(
+      `createPod: pod already exists, but no method implemented to extract all meta data we need`
     );
   }
 
