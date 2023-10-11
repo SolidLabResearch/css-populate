@@ -213,6 +213,7 @@ export async function createPodAccountsApi6(
 
   const body = await res.text();
   if (!res.ok) {
+    cli.v3("body", body);
     if (body.includes("Account already exists")) {
       //ignore
       return [false, null];
