@@ -14,18 +14,17 @@ import {
   getAccountApiInfo,
   getAccountInfo,
 } from "./css-accounts-api.js";
-
-function accountEmail(account: string): string {
-  return `${account}@example.org`;
-}
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 export interface CreatedUserInfo {
   IdPType: "CSS"; /// <=v6 or >v7 doesn't matter
   serverBaseURL: string;
   webID: string;
   podRoot: string;
+  podName: string;
   username: string;
   password: string;
+  email: string;
 }
 
 /**
@@ -33,13 +32,13 @@ export interface CreatedUserInfo {
  * @param {string} cli the cli arguments
  * @param {string} cssBaseUrl the CSS server's base URL. (we can't get this from cli if there is more than 1 server)
  * @param {string} authFetchCache The AuthFetchCache
- * @param {string} nameValue The name used to create the pod (same value as you would give in the register form online)
+ * @param {string} accountInfo The username/password used to create the account, and the podName (same value as you would give in the register form online)
  */
-export async function createPod(
+export async function createAccount(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  nameValue: string
+  accountInfo: ProvidedAccountInfo
 ): Promise<CreatedUserInfo> {
   let try1, try6, try7;
 
@@ -66,7 +65,7 @@ export async function createPod(
       cli,
       cssBaseUrl,
       authFetchCache,
-      nameValue
+      accountInfo
     );
   }
 
@@ -75,7 +74,7 @@ export async function createPod(
       cli,
       cssBaseUrl,
       authFetchCache,
-      nameValue
+      accountInfo
     );
   }
 
@@ -84,7 +83,7 @@ export async function createPod(
       cli,
       cssBaseUrl,
       authFetchCache,
-      nameValue,
+      accountInfo,
       accountApiInfo!
     );
   }
@@ -105,14 +104,14 @@ export async function createPodAccountsApi1(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  account: string
+  accountInfo: ProvidedAccountInfo
 ): Promise<[boolean, CreatedUserInfo | null]> {
-  cli.v1(`Will create pod "${account}"...`);
+  cli.v1(`Will create account "${accountInfo.username}"...`);
   const settings = {
-    podName: account,
-    email: accountEmail(account),
-    password: "password",
-    confirmPassword: "password",
+    podName: accountInfo.podName,
+    email: accountInfo.email,
+    password: accountInfo.password,
+    confirmPassword: accountInfo.password,
     register: true,
     createPod: true,
     createWebId: true,
@@ -146,13 +145,15 @@ export async function createPodAccountsApi1(
 
     if (body.includes("outside the configured identifier space")) {
       cli.v1(
-        `error registering account ${account} (${res.status} - ${body}): assuming incompatible IdP path`
+        `error registering account ${accountInfo.username} (${res.status} - ${body}): assuming incompatible IdP path`
       );
 
       return [true, null];
     }
 
-    console.error(`${res.status} - Creating pod for ${account} failed:`);
+    console.error(
+      `${res.status} - Creating pod for ${accountInfo.username} failed:`
+    );
     console.error(body);
     throw new ResponseError(res, body);
   }
@@ -166,8 +167,10 @@ export async function createPodAccountsApi1(
       serverBaseURL: cssBaseUrl,
       webID: jsonResponse.webId, //`${cssBaseUrl}${account}/profile/card#me`,
       podRoot: jsonResponse.podBaseUrl, //`${cssBaseUrl}${account}/`,
-      username: account,
-      password: "password",
+      podName: accountInfo.podName,
+      username: accountInfo.podName, //username is never passed to CSS in this version
+      password: accountInfo.password,
+      email: accountInfo.email,
     },
   ];
 }
@@ -176,14 +179,14 @@ export async function createPodAccountsApi6(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  account: string
+  accountInfo: ProvidedAccountInfo
 ): Promise<[boolean, CreatedUserInfo | null]> {
-  cli.v1(`Will create pod "${account}"...`);
+  cli.v1(`Will create pod "${accountInfo.username}"...`);
   const settings = {
-    podName: account,
-    email: accountEmail(account),
-    password: "password",
-    confirmPassword: "password",
+    podName: accountInfo.podName,
+    email: accountInfo.email,
+    password: accountInfo.password,
+    confirmPassword: accountInfo.password,
     register: true,
     createPod: true,
     createWebId: true,
@@ -217,12 +220,14 @@ export async function createPodAccountsApi6(
 
     if (body.includes("outside the configured identifier space")) {
       cli.v1(
-        `error registering account ${account} (${res.status} - ${body}): assuming incompatible IdP path`
+        `error registering account ${accountInfo.username} (${res.status} - ${body}): assuming incompatible IdP path`
       );
 
       return [true, null];
     }
-    console.error(`${res.status} - Creating pod for ${account} failed:`);
+    console.error(
+      `${res.status} - Creating account for ${accountInfo.username} failed:`
+    );
     console.error(body);
     throw new ResponseError(res, body);
   }
@@ -236,8 +241,10 @@ export async function createPodAccountsApi6(
       serverBaseURL: cssBaseUrl,
       webID: jsonResponse.webId, //`${cssBaseUrl}${account}/profile/card#me`,
       podRoot: jsonResponse.podBaseUrl, //`${cssBaseUrl}${account}/`,
-      username: account,
-      password: "password",
+      podName: accountInfo.podName,
+      username: accountInfo.podName, //username is never passed to CSS in this version
+      password: accountInfo.password,
+      email: accountInfo.email,
     },
   ];
 }
@@ -246,19 +253,19 @@ export async function createPodAccountsApi6(
  *
  * @param {string} cli CliArgs
  * @param {string} authFetchCache The AuthFetchCache
- * @param {string} account The name used to create the pod (same value as you would give in the register form online)
+ * @param {string} accountInfo The info used to create the account (same value as you would give in the register form online)
  * @param {string} basicAccountApiInfo AccountApiInfo (not logged in)
  */
 export async function createPodAccountsApi7(
   cli: CliArgs,
   cssBaseUrl: string,
   authFetchCache: AuthFetchCache,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   basicAccountApiInfo: AccountApiInfo
 ): Promise<[boolean, CreatedUserInfo | null]> {
   const cookieHeader = await createEmptyAccount(
     cli,
-    account,
+    accountInfo,
     basicAccountApiInfo
   );
   if (!cookieHeader) {
@@ -286,9 +293,9 @@ export async function createPodAccountsApi7(
   const passwordCreated = await createPassword(
     cli,
     cookieHeader,
-    account,
-    accountEmail(account),
-    "password",
+    accountInfo.username,
+    accountInfo.email,
+    accountInfo.password,
     fullAccountApiInfo
   );
   if (!passwordCreated) {
@@ -300,7 +307,7 @@ export async function createPodAccountsApi7(
   const createdPod = await createAccountPod(
     cli,
     cookieHeader,
-    account,
+    accountInfo.podName,
     fullAccountApiInfo
   );
   if (!createdPod) {
@@ -308,7 +315,7 @@ export async function createPodAccountsApi7(
     return [true, null];
   }
 
-  const accountInfo = await getAccountInfo(
+  const createdAccountInfo = await getAccountInfo(
     cli,
     cookieHeader,
     fullAccountApiInfo
@@ -318,10 +325,12 @@ export async function createPodAccountsApi7(
     {
       IdPType: "CSS",
       serverBaseURL: cssBaseUrl,
-      webID: accountInfo.webIds[0],
-      podRoot: accountInfo.pods[0],
-      username: account,
-      password: "password",
+      webID: Object.keys(createdAccountInfo.webIds)[0],
+      podRoot: Object.keys(createdAccountInfo.pods)[0],
+      username: accountInfo.username,
+      password: accountInfo.password,
+      podName: accountInfo.podName,
+      email: accountInfo.email,
     },
   ];
 }
@@ -329,7 +338,7 @@ export async function createPodAccountsApi7(
 export async function uploadPodFile(
   cli: CliArgs,
   cssBaseUrl: string,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   fileContent: string | Buffer,
   podFileRelative: string,
   authFetch: AnyFetchType,
@@ -342,15 +351,18 @@ export async function uploadPodFile(
     retry = false;
     if (debugLogging) {
       cli.v1(
-        `Will upload file to account ${account}, pod path "${podFileRelative}"`
+        `Will upload file to account ${accountInfo.username}, pod path "${podFileRelative}"`
       );
     }
 
-    const res = await authFetch(`${cssBaseUrl}${account}/${podFileRelative}`, {
-      method: "PUT",
-      headers: { "content-type": contentType },
-      body: fileContent,
-    });
+    const res = await authFetch(
+      `${cssBaseUrl}${accountInfo.podName}/${podFileRelative}`,
+      {
+        method: "PUT",
+        headers: { "content-type": contentType },
+        body: fileContent,
+      }
+    );
 
     // console.log(`res.ok`, res.ok);
     // console.log(`res.status`, res.status);
@@ -358,7 +370,7 @@ export async function uploadPodFile(
     // console.log(`res.text`, body);
     if (!res.ok) {
       console.error(
-        `${res.status} - Uploading to account ${account}, pod path "${podFileRelative}" failed:`
+        `${res.status} - Uploading to account ${accountInfo.username}, pod path "${podFileRelative}" failed:`
       );
       console.error(body);
 
@@ -433,7 +445,7 @@ function lastDotToSemi(input: string): string {
 export async function addAuthZFiles(
   cli: CliArgs,
   cssBaseUrl: string,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   authFetch: AnyFetchType,
   targetFilename: string,
   publicRead: boolean = true,
@@ -465,7 +477,7 @@ export async function addAuthZFiles(
         await addAuthZFile(
           cli,
           cssBaseUrl,
-          account,
+          accountInfo,
           authFetch,
           targetDirName,
           "",
@@ -487,7 +499,7 @@ export async function addAuthZFiles(
       await addAuthZFile(
         cli,
         cssBaseUrl,
-        account,
+        accountInfo,
         authFetch,
         subDirs,
         targetFilename,
@@ -505,7 +517,7 @@ export async function addAuthZFiles(
 export async function addAuthZFile(
   cli: CliArgs,
   cssBaseUrl: string,
-  account: string,
+  accountInfo: ProvidedAccountInfo,
   authFetch: AnyFetchType,
   targetDirname: string, //dir of the file that needs AuthZ
   targetBaseFilename: string, //base name (without dir) of the file that needs AuthZ. For dirs, this is empty
@@ -530,7 +542,7 @@ export async function addAuthZFile(
   if (authZType == "WAC") {
     newAuthZContent = makeAclContent(
       serverDomainName,
-      account,
+      accountInfo,
       authFetch,
       targetBaseFilename,
       publicRead,
@@ -543,7 +555,7 @@ export async function addAuthZFile(
   } else {
     newAuthZContent = makeAcrContent(
       serverDomainName,
-      account,
+      accountInfo,
       authFetch,
       targetBaseFilename,
       publicRead,
@@ -558,7 +570,7 @@ export async function addAuthZFile(
   await uploadPodFile(
     cli,
     cssBaseUrl,
-    account,
+    accountInfo,
     newAuthZContent,
     fullPathPodFilename,
     authFetch,

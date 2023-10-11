@@ -3,16 +3,33 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 
+export enum AccountAction {
+  UseExisting,
+  Create,
+  Auto,
+}
+
+export enum AccountSource {
+  File,
+  Template,
+}
+
 export interface CliArgs {
   verbosity_count: number;
   cssBaseUrl: string[];
-  userCount: number;
+
+  accountAction: AccountAction;
+  accountSource: AccountSource;
+  accountSourceCount: number;
+  accountSourceFile?: string;
+  accountSourceTemplateUsername: string;
+  accountSourceTemplatePass: string;
+
   fileSize: number;
   fileCount: number;
   addAclFiles: boolean;
   addAcrFiles: boolean;
   dirDepth: number;
-  generateUsers: boolean;
   userJsonOut?: string;
   addAcFilePerDir: boolean;
   addAcFilePerResource: boolean;
@@ -46,27 +63,61 @@ export function getCliArgs(): CliArgs {
       demandOption: true,
       array: true,
     })
-    .option("user-count", {
-      group: "CSS Server:",
-      type: "number",
-      description: "Number of users/pods to generate/populate",
+    .option("accounts", {
+      group: "Accounts:",
+      type: "string",
+      choices: ["USE_EXISTING", "CREATE", "AUTO"],
+      description:
+        "Do accounts exist already, or do they need to be created? (AUTO will create them if they don't yet exist.)" +
+        " Creating accounts includes creating a webID, and a pod.",
+      // default: "USE_EXISTING",
       demandOption: true,
     })
-    .option("generate-users", {
-      group: "Generate users:",
-      type: "boolean",
+    .option("account-source", {
+      group: "Accounts:",
+      type: "string",
+      choices: ["FILE", "TEMPLATE"],
       description:
-        "Generate users (= account + webid + pod). If not specified, it is assumed users have already been generated.",
-      default: false,
+        "Where to get the accounts to use or generate? A FILE with json info, or generate from TEMPLATE?",
+      default: "TEMPLATE",
       demandOption: false,
     })
+    .option("account-source-count", {
+      group: "Accounts:",
+      type: "number",
+      description: "Number of users/pods to generate/populate",
+      demandOption: false,
+    })
+    .option("account-source-file", {
+      group: "Accounts:",
+      type: "string",
+      description:
+        "The file from which to read JSON account info. Expected JSON: [{username: foo, password: bar}, ...]",
+      demandOption: false,
+    })
+    .option("account-template-username", {
+      group: "Accounts:",
+      type: "string",
+      description:
+        "Template for the account username. The text {{NR}} is replaced by the user number.",
+      default: "user{{NR}}",
+      demandOption: false,
+    })
+    .option("account-template-password", {
+      group: "Accounts:",
+      type: "string",
+      description:
+        "Template for the account password. The text {{NR}} is replaced by the user number.",
+      default: "pass",
+      demandOption: false,
+    })
+
     .option("user-json-out", {
       group: "Generate users:",
       type: "string",
       description:
         "A file to write user info to in JSON format. (username/password, webID, pod root URL, ...)",
       demandOption: false,
-      implies: ["generate-users"],
     })
     .option("generate-variable-size", {
       group: "Generate Variable Size Content:",
@@ -177,9 +228,14 @@ export function getCliArgs(): CliArgs {
       if (argvc.url.length < 1) {
         return "--url should be specified at least once";
       }
-      if (argvc.generateUsers && !argvc.userCount) {
-        return "--generate-users requires --user-count";
+
+      if (argvc.accountSource == "FILE" && !argvc.accountSourceFile) {
+        return "--account-source FILE requires --account-source-file";
       }
+      if (argvc.accountSource == "TEMPLATE" && !argvc.accountSourceCount) {
+        return "--account-source FILE requires --account-source-count";
+      }
+
       if (argvc.generateFixedSize && !argvc.userCount) {
         return "--generate-fixed-size requires --user-count";
       }
@@ -209,15 +265,47 @@ export function getCliArgs(): CliArgs {
     .strict(true);
   // ya = ya.wrap(ya.terminalWidth());
   const argv = ya.parseSync();
+  const accountAction =
+    argv.accounts == "USE_EXISTING"
+      ? AccountAction.UseExisting
+      : argv.accounts == "CREATE"
+      ? AccountAction.Create
+      : argv.accounts == "AUTO"
+      ? AccountAction.Auto
+      : null;
+  const accountSource =
+    argv.accountSource == "TEMPLATE"
+      ? AccountSource.Template
+      : argv.accountSource == "FILE"
+      ? AccountSource.File
+      : null;
+  if (accountAction === null) {
+    //this should not happen
+    throw new Error(`--accounts ${argv.accountAction} is invalid`);
+  }
+  if (accountSource === null) {
+    //this should not happen
+    throw new Error(`--account-source ${argv.accountSource} is invalid`);
+  }
+
   return {
     verbosity_count: argv.v,
     cssBaseUrl: argv.url.map((u) => (u.endsWith("/") ? u : u + "/")),
-    userCount: argv.userCount || 1,
+
+    // generateUsers: argv.generateUsers,
+    // userCount: argv.userCount || 1,
+
+    accountAction,
+    accountSource,
+    accountSourceCount: argv.accountSourceCount || 1,
+    accountSourceFile: argv.accountSourceFile,
+    accountSourceTemplateUsername: argv.accountTemplateUsername,
+    accountSourceTemplatePass: argv.accountTemplatePassword,
+
     fileSize: argv.fileSize || 10,
     fileCount: argv.fileCount || 1,
     addAclFiles: argv.addAclFiles,
     addAcrFiles: argv.addAcrFiles,
-    generateUsers: argv.generateUsers,
     userJsonOut: argv.userJsonOut,
     dirDepth: argv.dirDepth || 0,
     addAcFilePerDir: argv.addAcFilePerDir,

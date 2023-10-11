@@ -7,15 +7,13 @@ import {
 } from "./solid-auth.js";
 import { AnyFetchType, es6fetch } from "./generic-fetch.js";
 import { CliArgs } from "./css-populate-args.js";
+import { ProvidedAccountInfo } from "./generate-users.js";
 
 export class AuthFetchCache {
   cli: CliArgs;
   cssBaseUrl: string;
   authenticateCache: "none" | "token" | "all" = "none";
   authenticate: boolean = false;
-
-  accountMapByName: { [account: string]: number } = {};
-  accountMapByIndex: { [index: number]: string } = {};
 
   cssTokensByUser: Array<UserToken | null> = [];
   authAccessTokenByUser: Array<AccessToken | null> = [];
@@ -50,61 +48,35 @@ export class AuthFetchCache {
     }
   }
 
-  registerAccountName(index: number, name: string) {
-    this.accountMapByIndex[index] = name;
-    this.accountMapByName[name] = index;
-  }
-
-  getAccountIndex(name: string): number {
-    const res = this.accountMapByName[name];
-    if (res === undefined || res === null) {
-      console.log(
-        `Known accounts: ${JSON.stringify(Object.keys(this.accountMapByName))}`
-      );
-      throw Error(`Unknown account '${name}'`);
-    }
-    return res;
-  }
-
-  getAccountName(index: number): string {
-    const res = this.accountMapByIndex[index];
-    if (!res)
-      throw Error(
-        `Unknown account with index ${index} (len=${this.accountMapByName.length})`
-      );
-    return res;
-  }
-
-  async getAuthFetcherByName(name: string): Promise<AnyFetchType> {
-    return this.getAuthFetcherInternal(this.getAccountIndex(name), name);
-  }
-
-  async getAuthFetcher(userId: number): Promise<AnyFetchType> {
-    return this.getAuthFetcherInternal(userId, this.getAccountName(userId));
+  //TODO see if we can always use ProvidedAccountInfo
+  async getAuthFetcher(
+    accountInfo: ProvidedAccountInfo
+  ): Promise<AnyFetchType> {
+    return this.getAuthFetcherInternal(accountInfo.index, accountInfo.username);
   }
 
   async getAuthFetcherInternal(
-    userId: number,
-    account: string
+    accountIndex: number,
+    username: string
   ): Promise<AnyFetchType> {
     this.useCount++;
     if (!this.authenticate) {
       return this.fetcher;
     }
-    this.expireAccessToken(userId);
+    this.expireAccessToken(accountIndex);
     let userToken = null;
     let accessToken = null;
     let theFetch = null;
     if (this.authenticateCache !== "none") {
-      if (this.cssTokensByUser[userId]) {
-        userToken = this.cssTokensByUser[userId];
+      if (this.cssTokensByUser[accountIndex]) {
+        userToken = this.cssTokensByUser[accountIndex];
       }
       if (this.authenticateCache === "all") {
-        if (this.authAccessTokenByUser[userId]) {
-          accessToken = this.authAccessTokenByUser[userId];
+        if (this.authAccessTokenByUser[accountIndex]) {
+          accessToken = this.authAccessTokenByUser[accountIndex];
         }
-        if (this.authFetchersByUser[userId]) {
-          theFetch = this.authFetchersByUser[userId];
+        if (this.authFetchersByUser[accountIndex]) {
+          theFetch = this.authFetchersByUser[accountIndex];
         }
       }
     }
@@ -113,7 +85,7 @@ export class AuthFetchCache {
       userToken = await createUserToken(
         this.cli,
         this.cssBaseUrl,
-        account,
+        username,
         "password",
         this.fetcher
       );
@@ -123,7 +95,7 @@ export class AuthFetchCache {
       [theFetch, accessToken] = await getUserAuthFetch(
         this.cli,
         this.cssBaseUrl,
-        account,
+        username,
         userToken,
         this.fetcher,
         accessToken
@@ -131,17 +103,23 @@ export class AuthFetchCache {
       this.authFetchCount++;
     }
 
-    if (this.authenticateCache !== "none" && !this.cssTokensByUser[userId]) {
-      this.cssTokensByUser[userId] = userToken;
+    if (
+      this.authenticateCache !== "none" &&
+      !this.cssTokensByUser[accountIndex]
+    ) {
+      this.cssTokensByUser[accountIndex] = userToken;
     }
     if (
       this.authenticateCache === "all" &&
-      !this.authAccessTokenByUser[userId]
+      !this.authAccessTokenByUser[accountIndex]
     ) {
-      this.authAccessTokenByUser[userId] = accessToken;
+      this.authAccessTokenByUser[accountIndex] = accessToken;
     }
-    if (this.authenticateCache === "all" && !this.authFetchersByUser[userId]) {
-      this.authFetchersByUser[userId] = theFetch;
+    if (
+      this.authenticateCache === "all" &&
+      !this.authFetchersByUser[accountIndex]
+    ) {
+      this.authFetchersByUser[accountIndex] = theFetch;
     }
 
     return theFetch;
