@@ -150,7 +150,19 @@ export async function createPodAccountsApi1(
     cli.v3("body", body);
     if (body.includes("Account already exists")) {
       //ignore
-      return [false, null];
+      return [
+        false,
+        {
+          IdPType: "CSS",
+          serverBaseURL: cssBaseUrl,
+          webID: `${cssBaseUrl}${accountInfo.podName}/profile/card#me`,
+          podRoot: `${cssBaseUrl}${accountInfo.podName}/`,
+          podName: accountInfo.podName,
+          username: accountInfo.podName, //username is never passed to CSS in this version
+          password: accountInfo.password,
+          email: accountInfo.email,
+        },
+      ];
     }
 
     if (body.includes("outside the configured identifier space")) {
