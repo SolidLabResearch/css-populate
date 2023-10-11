@@ -119,7 +119,7 @@ export async function createUserTokenv7(
     cli,
     accountApiInfo,
     accountEmail(account),
-    "password"
+    password
   );
 
   ////// Get WebID from account info /////

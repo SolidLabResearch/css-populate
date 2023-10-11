@@ -146,7 +146,7 @@ export async function accountLogin(
   cli: CliArgs,
   accountApiInfo: AccountApiInfo,
   email: string,
-  password: string = "password"
+  password: string
 ): Promise<string> {
   cli.v2("Logging in...");
   const loginEndpoint = accountApiInfo.controls?.password?.login;

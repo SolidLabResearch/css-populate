@@ -52,12 +52,17 @@ export class AuthFetchCache {
   async getAuthFetcher(
     accountInfo: ProvidedAccountInfo
   ): Promise<AnyFetchType> {
-    return this.getAuthFetcherInternal(accountInfo.index, accountInfo.username);
+    return this.getAuthFetcherInternal(
+      accountInfo.index,
+      accountInfo.username,
+      accountInfo.password
+    );
   }
 
   async getAuthFetcherInternal(
     accountIndex: number,
-    username: string
+    username: string,
+    password: string
   ): Promise<AnyFetchType> {
     this.useCount++;
     if (!this.authenticate) {
@@ -86,7 +91,7 @@ export class AuthFetchCache {
         this.cli,
         this.cssBaseUrl,
         username,
-        "password",
+        password,
         this.fetcher
       );
       this.tokenFetchCount++;
