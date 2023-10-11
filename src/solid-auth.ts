@@ -72,8 +72,9 @@ export async function createUserTokenv6(
   const timeoutId = setTimeout(() => controller.abort(), 5000);
   let res = null;
   let body = null;
+  const url = `${cssBaseUrl}idp/credentials/`;
   try {
-    res = await fetcher(`${cssBaseUrl}idp/credentials/`, {
+    res = await fetcher(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -96,7 +97,8 @@ export async function createUserTokenv6(
   if (!res || !res.ok) {
     console.error(
       `${res.status} - Creating token for ${account} failed:`,
-      body
+      body,
+      url
     );
     throw new ResponseError(res, body);
   }
