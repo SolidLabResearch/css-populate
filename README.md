@@ -1,4 +1,9 @@
 # CSS Populate
+This tool is now part of: https://github.com/SolidLabResearch/solid-perftest-tools
+
+Use the new repo instead of this one. This repo is only left for archival purposes.
+
+---
 
 Tool to populate the Community Solid Server with dummy accounts and data, for testing purposes.
 
